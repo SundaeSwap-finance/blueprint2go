@@ -1,0 +1,152 @@
+{
+  "preamble": {
+    "title": "blueprint/test",
+    "description": "Aiken contracts for project 'blueprint/test'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.19+e525483"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "always_true.script.spend",
+      "datum": {
+        "title": "_datum",
+        "schema": {
+          "$ref": "#/definitions/List$Int"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "parameters": [
+        {
+          "title": "_param1",
+          "schema": {
+            "$ref": "#/definitions/Int"
+          }
+        },
+        {
+          "title": "_param2",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "58aa0101002229800aba2aba1aab9eaab9dab9a9bad0039bae002488888896600264646644b30013370e900118041baa0028994c004c02c00660166018003375a601600891125118049baa0028b200e3008300900130080023008001300537540111332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300b00214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300d00214bd7009919199800800801912cc004006297ae0149a26cac801991111111111",
+      "hash": "e758ec2b65ee19033bf0a815cd88d9dba7e353d0e7df3bcb8602ff01"
+    },
+    {
+      "title": "always_true.script.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "parameters": [
+        {
+          "title": "_param1",
+          "schema": {
+            "$ref": "#/definitions/Int"
+          }
+        },
+        {
+          "title": "_param2",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "58aa0101002229800aba2aba1aab9eaab9dab9a9bad0039bae002488888896600264646644b30013370e900118041baa0028994c004c02c00660166018003375a601600891125118049baa0028b200e3008300900130080023008001300537540111332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300b00214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300d00214bd7009919199800800801912cc004006297ae0149a26cac801991111111111",
+      "hash": "e758ec2b65ee19033bf0a815cd88d9dba7e353d0e7df3bcb8602ff01"
+    },
+    {
+      "title": "always_true.script_no_params.spend",
+      "datum": {
+        "title": "_datum",
+        "schema": {
+          "$ref": "#/definitions/List$Int"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "compiledCode": "58a101010029800aba2aba1aab9eaab9dab9a4888896600264646644b30013370e900118031baa0028994c004c02400660126014003375a601200891125118039baa0028b200a3006300700130060023006001300337540111332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300900214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300b00214bd7009919199800800801912cc004006297ae0149a26cac801991111",
+      "hash": "b153634f4741edb2b4bf061a924489ad52f93e7bec3716dd91b2a29a"
+    },
+    {
+      "title": "always_true.script_no_params.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "58a101010029800aba2aba1aab9eaab9dab9a4888896600264646644b30013370e900118031baa0028994c004c02400660126014003375a601200891125118039baa0028b200a3006300700130060023006001300337540111332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300900214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300b00214bd7009919199800800801912cc004006297ae0149a26cac801991111",
+      "hash": "b153634f4741edb2b4bf061a924489ad52f93e7bec3716dd91b2a29a"
+    },
+    {
+      "title": "nested/sometimes_true.script.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "parameters": [
+        {
+          "title": "param",
+          "schema": {
+            "$ref": "#/definitions/Int"
+          }
+        }
+      ],
+      "compiledCode": "58a6010100229800aba2aba1aab9eaab9dab9a9bad00248888896600264646644b30013370e900118039baa002899199119b88008375a601800c60140026014601600260106ea800a2c8030c01cc020004c01c008c01c004c010dd50031332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300a00214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300c00214bd7009919199800800801912cc004006297ae0149a26cac8019911",
+      "hash": "3e7c77a7103a5cc0db75b5a07c3bf780cf6932021bfbb32a21a7d1e7"
+    },
+    {
+      "title": "nested/sometimes_true.script.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "parameters": [
+        {
+          "title": "param",
+          "schema": {
+            "$ref": "#/definitions/Int"
+          }
+        }
+      ],
+      "compiledCode": "58a6010100229800aba2aba1aab9eaab9dab9a9bad00248888896600264646644b30013370e900118039baa002899199119b88008375a601800c60140026014601600260106ea800a2c8030c01cc020004c01c008c01c004c010dd50031332232330010010022259800800c52f5bded8c02646600200297adef6c6013232323001001222533300a00214bd7009919199800800801912cc004006297ae0149a26cac80192323002002001222533300c00214bd7009919199800800801912cc004006297ae0149a26cac8019911",
+      "hash": "3e7c77a7103a5cc0db75b5a07c3bf780cf6932021bfbb32a21a7d1e7"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data."
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "List$Int": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/Int"
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+// {{.Name}}Equals compares two {{.Name}} values for equality.
+func {{.Name}}Equals(a, b {{.Name}}) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	// Compare by serializing to PlutusData
+	aPd, aErr := a.ToPlutusData()
+	bPd, bErr := b.ToPlutusData()
+	if aErr != nil || bErr != nil {
+		return false
+	}
+	return aPd.Equals(bPd)
+}

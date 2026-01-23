@@ -1,0 +1,25 @@
+// {{.Name}} is a variant of {{.EnumName}} with a single value.
+type {{.Name}} struct {
+	Value {{.FieldType}}
+}
+
+func ({{.Name}}) {{.MethodName}}() {}
+
+func (v {{.Name}}) ToPlutusData() (PlutusData, error) {
+{{.ToPlutusDataInner}}}
+
+func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
+	if pd.Constr == nil {
+		return errors.New("expected constructor for {{.Name}}")
+	}
+	if pd.Constr.Index != {{.ConstrIndex}} {
+		return fmt.Errorf("wrong constructor index for {{.Name}}: expected {{.ConstrIndex}}, got %d", pd.Constr.Index)
+	}
+	if len(pd.Constr.Fields) != 1 {
+		return fmt.Errorf("wrong number of fields for {{.Name}}: expected 1, got %d", len(pd.Constr.Fields))
+	}
+{{.FromPlutusDataInner}}	return nil
+}
+
+func (v {{.Name}}) Equals(other {{.Name}}) bool {
+{{.EqualsInner}}}

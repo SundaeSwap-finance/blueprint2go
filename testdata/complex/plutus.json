@@ -1,0 +1,502 @@
+{
+  "preamble": {
+    "title": "treasury/funds",
+    "description": "Aiken contracts for project 'treasury/funds'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.13+900bf91"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "treasury.treasury.spend",
+      "datum": {
+        "title": "_d",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/types~1TreasurySpendRedeemer"
+        }
+      },
+      "parameters": [
+        {
+          "title": "config",
+          "schema": {
+            "$ref": "#/definitions/types~1TreasuryConfiguration"
+          }
+        }
+      ],
+      "compiledCode": "590100010100229800aba2aba1aab9eaab9dab9a488888c966002646465300130073754003300b00398058012444b30013370e9001001c4c8cc892818078009807980800098059baa0048992cc004c004012264b30010038acc004c008c030dd5001c566002601a6ea800e2b30013002300c375464660020026eb0c044c038dd5002912cc004006298103d87a80008992cc004cdd7980998081baa001",
+      "hash": "33c3e6ebbb86a162ca82f91783b42beea852b4212b77cfa770d958ab"
+    },
+    {
+      "title": "treasury.treasury.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "parameters": [
+        {
+          "title": "config",
+          "schema": {
+            "$ref": "#/definitions/types~1TreasuryConfiguration"
+          }
+        }
+      ],
+      "compiledCode": "590100010100229800aba2aba1aab9eaab9dab9a488888c966002646465300130073754003300b00398058012444b30013370e9001001c4c8cc892818078009807980800098059baa0048992cc004c004012264b30010038acc004c008c030dd5001c566002601a6ea800e2b30013002300c375464660020026eb0c044c038dd5002912cc004006298103d87a80008992cc004cdd7980998081baa001",
+      "hash": "33c3e6ebbb86a162ca82f91783b42beea852b4212b77cfa770d958ab"
+    },
+    {
+      "title": "vendor.vendor.spend",
+      "datum": {
+        "title": "_",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/types~1VendorSpendRedeemer"
+        }
+      },
+      "parameters": [
+        {
+          "title": "config",
+          "schema": {
+            "$ref": "#/definitions/types~1VendorConfiguration"
+          }
+        }
+      ],
+      "compiledCode": "58ff010100229800aba2aba1aab9eaab9dab9a488888c966002646465300130073754003300b00398058012444b30013370e9001001c4c8cc892818078009807980800098059baa0048992cc004c004012264b30010038acc004c008c030dd5001c566002601a6ea800e2b30013002300c375464660020026eb0c044c038dd5",
+      "hash": "d84d3ae68db2888f98330d67783b3912666e0e2b7a83718dc930693b"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data."
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "List$multisig/MultisigScript": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/multisig~1MultisigScript"
+      }
+    },
+    "List$types/Payout": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/types~1Payout"
+      }
+    },
+    "List$types/PayoutStatus": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/types~1PayoutStatus"
+      }
+    },
+    "Pairs$cardano/assets/AssetName_Int": {
+      "title": "Pairs<AssetName, Int>",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/cardano~1assets~1AssetName"
+      },
+      "values": {
+        "$ref": "#/definitions/Int"
+      }
+    },
+    "Pairs$cardano/assets/PolicyId_Pairs$cardano/assets/AssetName_Int": {
+      "title": "Pairs<PolicyId, Pairs<AssetName, Int>>",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/cardano~1assets~1PolicyId"
+      },
+      "values": {
+        "$ref": "#/definitions/Pairs$cardano~1assets~1AssetName_Int"
+      }
+    },
+    "Void": {
+      "title": "Unit",
+      "anyOf": [
+        {
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        }
+      ]
+    },
+    "cardano/assets/AssetName": {
+      "title": "AssetName",
+      "dataType": "bytes"
+    },
+    "cardano/assets/PolicyId": {
+      "title": "PolicyId",
+      "dataType": "bytes"
+    },
+    "cardano/transaction/OutputReference": {
+      "title": "OutputReference",
+      "description": "Reference to specific output via transaction ID and index position",
+      "anyOf": [
+        {
+          "title": "OutputReference",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "transaction_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "output_index",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "multisig/MultisigScript": {
+      "title": "MultisigScript",
+      "anyOf": [
+        {
+          "title": "Signature",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "key_hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        },
+        {
+          "title": "AllOf",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "scripts",
+              "$ref": "#/definitions/List$multisig~1MultisigScript"
+            }
+          ]
+        },
+        {
+          "title": "AnyOf",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "scripts",
+              "$ref": "#/definitions/List$multisig~1MultisigScript"
+            }
+          ]
+        },
+        {
+          "title": "AtLeast",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": [
+            {
+              "title": "required",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "scripts",
+              "$ref": "#/definitions/List$multisig~1MultisigScript"
+            }
+          ]
+        },
+        {
+          "title": "Before",
+          "dataType": "constructor",
+          "index": 4,
+          "fields": [
+            {
+              "title": "time",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "After",
+          "dataType": "constructor",
+          "index": 5,
+          "fields": [
+            {
+              "title": "time",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 6,
+          "fields": [
+            {
+              "title": "script_hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "types/Payout": {
+      "title": "Payout",
+      "anyOf": [
+        {
+          "title": "Payout",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "maturation",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "value",
+              "$ref": "#/definitions/Pairs$cardano~1assets~1PolicyId_Pairs$cardano~1assets~1AssetName_Int"
+            },
+            {
+              "title": "status",
+              "$ref": "#/definitions/types~1PayoutStatus"
+            }
+          ]
+        }
+      ]
+    },
+    "types/PayoutStatus": {
+      "title": "PayoutStatus",
+      "anyOf": [
+        {
+          "title": "Active",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Paused",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "types/TreasuryConfiguration": {
+      "title": "TreasuryConfiguration",
+      "description": "Treasury script configuration parameters",
+      "anyOf": [
+        {
+          "title": "TreasuryConfiguration",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "registry_token",
+              "$ref": "#/definitions/cardano~1assets~1PolicyId"
+            },
+            {
+              "title": "permissions",
+              "$ref": "#/definitions/types~1TreasuryPermissions"
+            },
+            {
+              "title": "expiration",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "payout_upperbound",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "types/TreasuryPermissions": {
+      "title": "TreasuryPermissions",
+      "description": "Permission thresholds for treasury operations",
+      "anyOf": [
+        {
+          "title": "TreasuryPermissions",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "reorganize",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "sweep",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "fund",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "disburse",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            }
+          ]
+        }
+      ]
+    },
+    "types/TreasurySpendRedeemer": {
+      "title": "TreasurySpendRedeemer",
+      "anyOf": [
+        {
+          "title": "Reorganize",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "SweepTreasury",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "Fund",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "amount",
+              "$ref": "#/definitions/Pairs$cardano~1assets~1PolicyId_Pairs$cardano~1assets~1AssetName_Int"
+            }
+          ]
+        },
+        {
+          "title": "Disburse",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": [
+            {
+              "title": "amount",
+              "$ref": "#/definitions/Pairs$cardano~1assets~1PolicyId_Pairs$cardano~1assets~1AssetName_Int"
+            }
+          ]
+        }
+      ]
+    },
+    "types/VendorConfiguration": {
+      "title": "VendorConfiguration",
+      "anyOf": [
+        {
+          "title": "VendorConfiguration",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "registry_token",
+              "$ref": "#/definitions/cardano~1assets~1PolicyId"
+            },
+            {
+              "title": "permissions",
+              "$ref": "#/definitions/types~1VendorPermissions"
+            },
+            {
+              "title": "expiration",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "types/VendorDatum": {
+      "title": "VendorDatum",
+      "anyOf": [
+        {
+          "title": "VendorDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "vendor",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "payouts",
+              "$ref": "#/definitions/List$types~1Payout"
+            }
+          ]
+        }
+      ]
+    },
+    "types/VendorPermissions": {
+      "title": "VendorPermissions",
+      "anyOf": [
+        {
+          "title": "VendorPermissions",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "pause",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "resume",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            },
+            {
+              "title": "modify",
+              "$ref": "#/definitions/multisig~1MultisigScript"
+            }
+          ]
+        }
+      ]
+    },
+    "types/VendorSpendRedeemer": {
+      "title": "VendorSpendRedeemer",
+      "anyOf": [
+        {
+          "title": "Withdraw",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Adjudicate",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "statuses",
+              "$ref": "#/definitions/List$types~1PayoutStatus"
+            }
+          ]
+        },
+        {
+          "title": "Modify",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        },
+        {
+          "title": "SweepVendor",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": []
+        },
+        {
+          "title": "Malformed",
+          "dataType": "constructor",
+          "index": 4,
+          "fields": []
+        }
+      ]
+    }
+  }
+}

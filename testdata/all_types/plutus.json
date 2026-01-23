@@ -1,0 +1,409 @@
+{
+  "preamble": {
+    "title": "test/string_validator",
+    "description": "Aiken contracts for project 'test/string_validator'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.19+e525483"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "string_validator.test_types.spend",
+      "datum": {
+        "title": "_datum",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/string_validator~1AllTypes"
+        }
+      },
+      "compiledCode": "5903cf01010029800aba2aba1aab9faab9eaab9dab9a48888896600264653001300700198039804000cdc3a400530070024888966002600460106ea800e266453001300d0029806980700148966002600660186ea800a26464b30013012002801c590101bae3010001300d375400516402d2232598009802000c566002601c6ea800e00516403d1598009803800c566002601c6ea800e00516403d15980099b874801000626464b300130130028024590111bae3011001300e3754007164030806100c18061baa00291191980080080191198018009801001244444b30013006300f3754017132323232323232323232329800980e800cc07402a603a013301d008980e803cc07401a603a00b301d004980e801cc0740092222222222598009814005c4cc060c09c054566002603660486ea802626464b3001302a0028acc004c074c098dd500544c8c8ca600264b3001302b0018acc004cdc4a4008605400316898121815000a0528b205837546058003375c6058007375a60580049112cc004c0c0012264b30013024302d3754021132332259800981a000c4c8c96600260520031323259800981c00140222c81b0dd6981b00098199baa0028acc004c0b00062b3001303337540050068b20688b206240c460626ea8004c0cc0062c8190dd71818800981900098171baa0108b2058159800981198161baa00e8992cc004c0c400626603e6eb0c0c00048966002005159800981318179baa0108992cc004c0d00062660446eb0c0cc0048966002005133025012159800981498191baa01189919192cc004c0e400a26605260700062b3001302c30353754027132332259800981e000c4cc0acc0ec0044c966002606060726ea805a264b3001303e001899192cc004c0cc006264b300130410018998189820000802c5903f181e9baa0028acc004c0d80062b3001303d37540050048b207c8b207640ec60766ea8004c0f40062c81e0c0e8dd500b4590380acc004c0bcc0e0dd500f44c966002607a00313302b3758607800244b30010028a51899817981f00109800981f801207a8b20763039375403d1640dd1640e86eb8c0e4004c0e8004c0d8dd5009c590344590371bad30370013037001303337540231640c513230023037003375c606a00481a22c8190c0c0dd500845902e44c8c008c0d000cdd6981900120628b205e302d375401d1640ad1640b8302c001302b001302737540151640951640a06eb4c0a0004c094dd5004c590234590260c074004c070004c06c004c068004c064004c060004c05c004c058004c054004c050004c040dd5005c5900e0c024dd50019b87480022c8038600e00260066ea801e29344d95900101",
+      "hash": "5964f52dd6d02d2662931ac1b7b6121d612f91780beb543e5f7413a8"
+    },
+    {
+      "title": "string_validator.test_types.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "5903cf01010029800aba2aba1aab9faab9eaab9dab9a48888896600264653001300700198039804000cdc3a400530070024888966002600460106ea800e266453001300d0029806980700148966002600660186ea800a26464b30013012002801c590101bae3010001300d375400516402d2232598009802000c566002601c6ea800e00516403d1598009803800c566002601c6ea800e00516403d15980099b874801000626464b300130130028024590111bae3011001300e3754007164030806100c18061baa00291191980080080191198018009801001244444b30013006300f3754017132323232323232323232329800980e800cc07402a603a013301d008980e803cc07401a603a00b301d004980e801cc0740092222222222598009814005c4cc060c09c054566002603660486ea802626464b3001302a0028acc004c074c098dd500544c8c8ca600264b3001302b0018acc004cdc4a4008605400316898121815000a0528b205837546058003375c6058007375a60580049112cc004c0c0012264b30013024302d3754021132332259800981a000c4c8c96600260520031323259800981c00140222c81b0dd6981b00098199baa0028acc004c0b00062b3001303337540050068b20688b206240c460626ea8004c0cc0062c8190dd71818800981900098171baa0108b2058159800981198161baa00e8992cc004c0c400626603e6eb0c0c00048966002005159800981318179baa0108992cc004c0d00062660446eb0c0cc0048966002005133025012159800981498191baa01189919192cc004c0e400a26605260700062b3001302c30353754027132332259800981e000c4cc0acc0ec0044c966002606060726ea805a264b3001303e001899192cc004c0cc006264b300130410018998189820000802c5903f181e9baa0028acc004c0d80062b3001303d37540050048b207c8b207640ec60766ea8004c0f40062c81e0c0e8dd500b4590380acc004c0bcc0e0dd500f44c966002607a00313302b3758607800244b30010028a51899817981f00109800981f801207a8b20763039375403d1640dd1640e86eb8c0e4004c0e8004c0d8dd5009c590344590371bad30370013037001303337540231640c513230023037003375c606a00481a22c8190c0c0dd500845902e44c8c008c0d000cdd6981900120628b205e302d375401d1640ad1640b8302c001302b001302737540151640951640a06eb4c0a0004c094dd5004c590234590260c074004c070004c06c004c068004c064004c060004c05c004c058004c054004c050004c040dd5005c5900e0c024dd50019b87480022c8038600e00260066ea801e29344d95900101",
+      "hash": "5964f52dd6d02d2662931ac1b7b6121d612f91780beb543e5f7413a8"
+    }
+  ],
+  "definitions": {
+    "Bool": {
+      "title": "Bool",
+      "anyOf": [
+        {
+          "title": "False",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "True",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data."
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "List$ByteArray": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/ByteArray"
+      }
+    },
+    "List$Int": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/Int"
+      }
+    },
+    "List$string_validator/SimpleString": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/string_validator~1SimpleString"
+      }
+    },
+    "Option$Int": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$string_validator/SimpleString": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/string_validator~1SimpleString"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "string_validator/AllTypes": {
+      "title": "AllTypes",
+      "description": "Master type that references all other types to ensure they appear in blueprint",
+      "anyOf": [
+        {
+          "title": "AllTypes",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "simple_string",
+              "$ref": "#/definitions/string_validator~1SimpleString"
+            },
+            {
+              "title": "simple_int",
+              "$ref": "#/definitions/string_validator~1SimpleInt"
+            },
+            {
+              "title": "multiple_fields",
+              "$ref": "#/definitions/string_validator~1MultipleFields"
+            },
+            {
+              "title": "with_option",
+              "$ref": "#/definitions/string_validator~1WithOption"
+            },
+            {
+              "title": "with_list",
+              "$ref": "#/definitions/string_validator~1WithList"
+            },
+            {
+              "title": "with_string_list",
+              "$ref": "#/definitions/string_validator~1WithStringList"
+            },
+            {
+              "title": "status",
+              "$ref": "#/definitions/string_validator~1Status"
+            },
+            {
+              "title": "nested",
+              "$ref": "#/definitions/string_validator~1Nested"
+            },
+            {
+              "title": "with_enum",
+              "$ref": "#/definitions/string_validator~1WithEnum"
+            },
+            {
+              "title": "with_optional_nested",
+              "$ref": "#/definitions/string_validator~1WithOptionalNested"
+            },
+            {
+              "title": "with_record_list",
+              "$ref": "#/definitions/string_validator~1WithRecordList"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/MultipleFields": {
+      "title": "MultipleFields",
+      "description": "Record with multiple primitive fields",
+      "anyOf": [
+        {
+          "title": "MultipleFields",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "name",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "age",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "active",
+              "$ref": "#/definitions/Bool"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/Nested": {
+      "title": "Nested",
+      "description": "Record containing another record (nested)",
+      "anyOf": [
+        {
+          "title": "Nested",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "inner",
+              "$ref": "#/definitions/string_validator~1SimpleString"
+            },
+            {
+              "title": "count",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/SimpleInt": {
+      "title": "SimpleInt",
+      "description": "Record with an integer field",
+      "anyOf": [
+        {
+          "title": "SimpleInt",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "value",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/SimpleString": {
+      "title": "SimpleString",
+      "description": "Simple record with a single ByteArray field",
+      "anyOf": [
+        {
+          "title": "SimpleString",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "message",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/Status": {
+      "title": "Status",
+      "description": "Enum type with multiple constructors",
+      "anyOf": [
+        {
+          "title": "Active",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Inactive",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "Pending",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "reason",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithEnum": {
+      "title": "WithEnum",
+      "description": "Record containing an enum",
+      "anyOf": [
+        {
+          "title": "WithEnum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "status",
+              "$ref": "#/definitions/string_validator~1Status"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithList": {
+      "title": "WithList",
+      "description": "Record with a list field",
+      "anyOf": [
+        {
+          "title": "WithList",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "items",
+              "$ref": "#/definitions/List$Int"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithOption": {
+      "title": "WithOption",
+      "description": "Record with an optional field",
+      "anyOf": [
+        {
+          "title": "WithOption",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "label",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "maybe_value",
+              "$ref": "#/definitions/Option$Int"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithOptionalNested": {
+      "title": "WithOptionalNested",
+      "description": "Record with optional nested type",
+      "anyOf": [
+        {
+          "title": "WithOptionalNested",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "data",
+              "$ref": "#/definitions/Option$string_validator~1SimpleString"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithRecordList": {
+      "title": "WithRecordList",
+      "description": "Record with list of records",
+      "anyOf": [
+        {
+          "title": "WithRecordList",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "entries",
+              "$ref": "#/definitions/List$string_validator~1SimpleString"
+            }
+          ]
+        }
+      ]
+    },
+    "string_validator/WithStringList": {
+      "title": "WithStringList",
+      "description": "Record with a list of strings",
+      "anyOf": [
+        {
+          "title": "WithStringList",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "names",
+              "$ref": "#/definitions/List$ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+// {{.VariantName}} is a variant of {{.EnumName}}.
+type {{.VariantName}} struct{}
+
+func ({{.VariantName}}) {{.MethodName}}() {}
+
+func (v {{.VariantName}}) ToPlutusData() (PlutusData, error) {
+	return NewConstrPlutusData({{.ConstrIndex}}), nil
+}
+
+func (v *{{.VariantName}}) FromPlutusData(pd PlutusData) error {
+	if pd.Constr == nil {
+		return errors.New("expected constructor for {{.VariantName}}")
+	}
+	if pd.Constr.Index != {{.ConstrIndex}} {
+		return fmt.Errorf("wrong constructor index for {{.VariantName}}: expected {{.ConstrIndex}}, got %d", pd.Constr.Index)
+	}
+	return nil
+}
+
+func (v {{.VariantName}}) Equals(other {{.VariantName}}) bool {
+	return true
+}

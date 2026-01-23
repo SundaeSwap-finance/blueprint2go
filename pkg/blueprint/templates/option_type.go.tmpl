@@ -1,0 +1,47 @@
+// {{.Name}} represents an optional {{.InnerType}} value.
+type {{.Name}} struct {
+	Value {{.InnerType}}
+	IsSet bool
+}
+
+func (v {{.Name}}) ToPlutusData() (PlutusData, error) {
+	if !v.IsSet {
+		return NewConstrPlutusData(1), nil // None
+	}
+{{.ToPlutusDataInner}}}
+
+func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
+	if pd.Constr == nil {
+		return errors.New("expected constructor for {{.Name}}")
+	}
+	if pd.Constr.Index == 1 { // None
+		v.IsSet = false
+		return nil
+	}
+	if pd.Constr.Index != 0 {
+		return fmt.Errorf("unknown constructor index for {{.Name}}: got %d (expected 0 for Some or 1 for None)", pd.Constr.Index)
+	}
+	if len(pd.Constr.Fields) != 1 {
+		return fmt.Errorf("wrong number of fields for {{.Name}} Some: expected 1, got %d", len(pd.Constr.Fields))
+	}
+	v.IsSet = true
+{{.FromPlutusDataInner}}	return nil
+}
+
+// {{.Name}}FromPlutusData decodes a {{.Name}} from PlutusData.
+func {{.Name}}FromPlutusData(pd PlutusData) ({{.Name}}, error) {
+	var v {{.Name}}
+	if err := v.FromPlutusData(pd); err != nil {
+		return {{.Name}}{}, err
+	}
+	return v, nil
+}
+
+func (v {{.Name}}) Equals(other {{.Name}}) bool {
+	if v.IsSet != other.IsSet {
+		return false
+	}
+	if !v.IsSet {
+		return true // Both are None
+	}
+{{.EqualsInner}}}

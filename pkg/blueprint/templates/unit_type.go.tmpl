@@ -1,0 +1,19 @@
+// {{.Name}} represents the Aiken Void/Unit type.
+type {{.Name}} struct{}
+
+func (v {{.Name}}) ToPlutusData() (PlutusData, error) {
+	return NewConstrPlutusData(0), nil
+}
+
+func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
+	if pd.Constr == nil {
+		return errors.New("expected constructor for Unit type")
+	}
+	if pd.Constr.Index != 0 {
+		return fmt.Errorf("wrong constructor index for Unit type: expected 0, got %d", pd.Constr.Index)
+	}
+	if len(pd.Constr.Fields) != 0 {
+		return fmt.Errorf("wrong number of fields for Unit type: expected 0, got %d", len(pd.Constr.Fields))
+	}
+	return nil
+}

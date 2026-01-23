@@ -1,0 +1,25 @@
+// {{.Name}} represents the Aiken Bool type.
+type {{.Name}} bool
+
+func (v {{.Name}}) ToPlutusData() (PlutusData, error) {
+	if v {
+		return NewConstrPlutusData(1), nil
+	}
+	return NewConstrPlutusData(0), nil
+}
+
+func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
+	if pd.Constr == nil {
+		return errors.New("expected constructor for {{.Name}}")
+	}
+	*v = pd.Constr.Index == 1
+	return nil
+}
+
+// {{.Name}}FromPlutusData decodes a {{.Name}} from PlutusData.
+func {{.Name}}FromPlutusData(pd PlutusData) ({{.Name}}, error) {
+	if pd.Constr == nil {
+		return false, errors.New("expected constructor for {{.Name}}")
+	}
+	return {{.Name}}(pd.Constr.Index == 1), nil
+}

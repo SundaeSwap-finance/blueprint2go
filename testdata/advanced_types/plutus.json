@@ -1,0 +1,275 @@
+{
+  "preamble": {
+    "title": "advanced/types",
+    "description": "Test advanced type patterns",
+    "version": "1.0.0",
+    "plutusVersion": "v3",
+    "license": "MIT"
+  },
+  "validators": [],
+  "definitions": {
+    "Int": {
+      "dataType": "integer"
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Bool": {
+      "title": "Bool",
+      "anyOf": [
+        {
+          "title": "False",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "True",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data"
+    },
+    "custom/PolicyId": {
+      "title": "PolicyId",
+      "dataType": "bytes"
+    },
+    "custom/AssetName": {
+      "title": "AssetName",
+      "dataType": "bytes"
+    },
+    "custom/TokenAmount": {
+      "title": "TokenAmount",
+      "dataType": "integer"
+    },
+    "custom/Credential": {
+      "title": "Credential",
+      "anyOf": [
+        {
+          "title": "VerificationKey",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/custom~1KeyHash"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/custom~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "custom/KeyHash": {
+      "title": "KeyHash",
+      "dataType": "bytes"
+    },
+    "custom/ScriptHash": {
+      "title": "ScriptHash",
+      "dataType": "bytes"
+    },
+    "custom/Asset": {
+      "title": "Asset",
+      "dataType": "list",
+      "items": [
+        {
+          "$ref": "#/definitions/custom~1PolicyId"
+        },
+        {
+          "$ref": "#/definitions/custom~1AssetName"
+        }
+      ]
+    },
+    "Tuple$Int_ByteArray": {
+      "title": "Tuple",
+      "dataType": "list",
+      "items": [
+        {
+          "$ref": "#/definitions/Int"
+        },
+        {
+          "$ref": "#/definitions/ByteArray"
+        }
+      ]
+    },
+    "custom/Datum": {
+      "title": "Datum",
+      "anyOf": [
+        {
+          "title": "NoDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "DatumHash",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        },
+        {
+          "title": "InlineDatum",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "$ref": "#/definitions/Data"
+            }
+          ]
+        }
+      ]
+    },
+    "Option$custom~1Credential": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/custom~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "custom/Address": {
+      "title": "Address",
+      "anyOf": [
+        {
+          "title": "Address",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "payment",
+              "$ref": "#/definitions/custom~1Credential"
+            },
+            {
+              "title": "stake",
+              "$ref": "#/definitions/Option$custom~1Credential"
+            }
+          ]
+        }
+      ]
+    },
+    "custom/Token": {
+      "title": "Token",
+      "anyOf": [
+        {
+          "title": "Token",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "policy_id",
+              "$ref": "#/definitions/custom~1PolicyId"
+            },
+            {
+              "title": "asset_name",
+              "$ref": "#/definitions/custom~1AssetName"
+            },
+            {
+              "title": "amount",
+              "$ref": "#/definitions/custom~1TokenAmount"
+            }
+          ]
+        }
+      ]
+    },
+    "custom/WithData": {
+      "title": "WithData",
+      "anyOf": [
+        {
+          "title": "WithData",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "label",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "data",
+              "$ref": "#/definitions/Data"
+            }
+          ]
+        }
+      ]
+    },
+    "custom/WithBoolRef": {
+      "title": "WithBoolRef",
+      "anyOf": [
+        {
+          "title": "WithBoolRef",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "name",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "active",
+              "$ref": "#/definitions/Bool"
+            }
+          ]
+        }
+      ]
+    },
+    "List$custom~1PolicyId": {
+      "dataType": "list",
+      "items": [
+        {
+          "$ref": "#/definitions/custom~1PolicyId"
+        }
+      ]
+    },
+    "custom/SignatureList": {
+      "title": "SignatureList",
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/custom~1Credential"
+      }
+    },
+    "custom/WithPolicyList": {
+      "title": "WithPolicyList",
+      "anyOf": [
+        {
+          "title": "WithPolicyList",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "policies",
+              "$ref": "#/definitions/List$custom~1PolicyId"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

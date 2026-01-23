@@ -1,0 +1,5 @@
+// {{.Name}} is an enum type with multiple constructors.
+type {{.Name}} interface {
+	{{.MethodName}}()
+	ToPlutusData() (PlutusData, error)
+}

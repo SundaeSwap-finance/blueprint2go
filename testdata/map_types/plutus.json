@@ -1,0 +1,120 @@
+{
+  "preamble": {
+    "title": "map/types",
+    "description": "Test map type patterns",
+    "version": "1.0.0",
+    "plutusVersion": "v3",
+    "license": "MIT"
+  },
+  "validators": [],
+  "definitions": {
+    "Int": {
+      "dataType": "integer"
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Pairs$Int_Int": {
+      "title": "Pairs",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/Int"
+      },
+      "values": {
+        "$ref": "#/definitions/Int"
+      }
+    },
+    "Pairs$ByteArray_Int": {
+      "title": "Pairs",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/ByteArray"
+      },
+      "values": {
+        "$ref": "#/definitions/Int"
+      }
+    },
+    "Pairs$ByteArray_ByteArray": {
+      "title": "Pairs",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/ByteArray"
+      },
+      "values": {
+        "$ref": "#/definitions/ByteArray"
+      }
+    },
+    "map/SimpleIntMap": {
+      "title": "SimpleIntMap",
+      "anyOf": [
+        {
+          "title": "SimpleIntMap",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "values",
+              "$ref": "#/definitions/Pairs$Int_Int"
+            }
+          ]
+        }
+      ]
+    },
+    "map/StringToIntMap": {
+      "title": "StringToIntMap",
+      "anyOf": [
+        {
+          "title": "StringToIntMap",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "entries",
+              "$ref": "#/definitions/Pairs$ByteArray_Int"
+            }
+          ]
+        }
+      ]
+    },
+    "map/StringToStringMap": {
+      "title": "StringToStringMap",
+      "anyOf": [
+        {
+          "title": "StringToStringMap",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "data",
+              "$ref": "#/definitions/Pairs$ByteArray_ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "map/WithMultipleMaps": {
+      "title": "WithMultipleMaps",
+      "anyOf": [
+        {
+          "title": "WithMultipleMaps",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "name",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "scores",
+              "$ref": "#/definitions/Pairs$ByteArray_Int"
+            },
+            {
+              "title": "metadata",
+              "$ref": "#/definitions/Pairs$ByteArray_ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
