@@ -366,3 +366,50 @@ require github.com/x448/float16 v0.8.4 // indirect
 		t.Errorf("generated code failed to compile: %v\nOutput: %s\n\nGenerated code:\n%s", err, output, code)
 	}
 }
+
+func TestTupleUsesConstrNotList(t *testing.T) {
+	// In Plutus/Aiken, tuples are encoded as Constr 0 [fields...], not as List [fields...]
+	// This test verifies that generated code for tuple types uses NewConstrPlutusData(0, ...)
+	// instead of NewListPlutusData(...)
+
+	bp, err := LoadBlueprint("../../testdata/tuple/plutus.json")
+	if err != nil {
+		t.Fatalf("failed to load blueprint: %v", err)
+	}
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "tuples"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	// Find the TupleIntBytearray struct (name is normalized from Tuple$Int_ByteArray)
+	if !strings.Contains(code, "type TupleIntBytearray struct") {
+		t.Fatal("expected to find TupleIntBytearray struct in generated code")
+	}
+
+	// ToPlutusData should use NewConstrPlutusData(0, ...) NOT NewListPlutusData(...)
+	// because tuples in Plutus are Constr 0 [fields...], not List [fields...]
+	if strings.Contains(code, "func (v TupleIntBytearray) ToPlutusData()") {
+		if strings.Contains(code, "return NewListPlutusData(items...), nil") {
+			t.Error("TupleIntBytearray.ToPlutusData() should use NewConstrPlutusData(0, fields...) for tuples, not NewListPlutusData(items...)")
+		}
+		if !strings.Contains(code, "return NewConstrPlutusData(0, fields...), nil") {
+			t.Error("TupleIntBytearray.ToPlutusData() is missing NewConstrPlutusData(0, fields...)")
+		}
+	} else {
+		t.Error("expected to find TupleIntBytearray.ToPlutusData() method")
+	}
+
+	// FromPlutusData should check for Constr, not List
+	if strings.Contains(code, "func (v *TupleIntBytearray) FromPlutusData(pd PlutusData)") {
+		if strings.Contains(code, "if pd.List == nil") {
+			t.Error("TupleIntBytearray.FromPlutusData() should check pd.Constr for tuples, not pd.List")
+		}
+		if !strings.Contains(code, "if pd.Constr == nil") {
+			t.Error("TupleIntBytearray.FromPlutusData() is missing pd.Constr check")
+		}
+	} else {
+		t.Error("expected to find TupleIntBytearray.FromPlutusData() method")
+	}
+}
