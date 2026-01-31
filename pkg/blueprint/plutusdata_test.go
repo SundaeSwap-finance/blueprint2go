@@ -160,6 +160,63 @@ func TestPlutusData_FromHex(t *testing.T) {
 	}
 }
 
+func TestPlutusData_NilValues(t *testing.T) {
+	// Test that nil values cause an error during CBOR serialization
+	// instead of silently producing invalid CBOR
+
+	t.Run("NilInteger", func(t *testing.T) {
+		pd := NewIntPlutusData(nil)
+		_, err := pd.MarshalCBOR()
+		if err == nil {
+			t.Error("expected error when marshaling nil integer, got none")
+		}
+	})
+
+	t.Run("NilByteString", func(t *testing.T) {
+		pd := NewBytesPlutusData(nil)
+		_, err := pd.MarshalCBOR()
+		if err == nil {
+			t.Error("expected error when marshaling nil byte string, got none")
+		}
+	})
+
+	t.Run("EmptyPlutusData", func(t *testing.T) {
+		pd := PlutusData{} // All fields nil
+		_, err := pd.MarshalCBOR()
+		if err == nil {
+			t.Error("expected error when marshaling empty PlutusData, got none")
+		}
+	})
+
+	t.Run("ValidEmptyList", func(t *testing.T) {
+		// Empty list is valid (not nil)
+		pd := NewListPlutusData()
+		data, err := pd.MarshalCBOR()
+		if err != nil {
+			t.Errorf("unexpected error marshaling empty list: %v", err)
+		}
+		// Empty indefinite-length list: 9f ff
+		expected := []byte{0x9f, 0xff}
+		if string(data) != string(expected) {
+			t.Errorf("expected %x, got %x", expected, data)
+		}
+	})
+
+	t.Run("ValidEmptyMap", func(t *testing.T) {
+		// Empty map is valid (not nil)
+		pd := NewMapPlutusData()
+		data, err := pd.MarshalCBOR()
+		if err != nil {
+			t.Errorf("unexpected error marshaling empty map: %v", err)
+		}
+		// Empty definite-length map: a0
+		expected := []byte{0xa0}
+		if string(data) != string(expected) {
+			t.Errorf("expected %x, got %x", expected, data)
+		}
+	})
+}
+
 func TestPlutusData_RoundTrip(t *testing.T) {
 	// Complex nested structure
 	original := NewConstrPlutusData(0,

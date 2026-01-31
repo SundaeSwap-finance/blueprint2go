@@ -54,11 +54,17 @@ func NewBytesPlutusData(b []byte) PlutusData {
 
 // NewListPlutusData creates a new list PlutusData.
 func NewListPlutusData(items ...PlutusData) PlutusData {
+	if items == nil {
+		items = []PlutusData{}
+	}
 	return PlutusData{List: items}
 }
 
 // NewMapPlutusData creates a new map PlutusData.
 func NewMapPlutusData(entries ...PlutusDataMapEntry) PlutusData {
+	if entries == nil {
+		entries = []PlutusDataMapEntry{}
+	}
 	return PlutusData{Map: entries}
 }
 
@@ -167,8 +173,7 @@ func (p PlutusData) toCBORBytes() ([]byte, error) {
 		}
 		return buf.Bytes(), nil
 	default:
-		// Empty constructor 0
-		return []byte{0xd8, 0x79, 0x9f, 0xff}, nil
+		return nil, errors.New("invalid PlutusData: all fields are nil (possibly a nil *big.Int or []byte was passed)")
 	}
 }
 

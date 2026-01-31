@@ -186,27 +186,27 @@ func (g *Generator) getOptionInnerToPlutusDataCode(optionName string, schema *Sc
 		refName := innerSchema.RefName()
 		switch refName {
 		case "Int":
-			return "\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n"
+			return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected Int)\")\n\t}\n\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n", optionName)
 		case "ByteArray":
-			return "\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n"
+			return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected ByteArray)\")\n\t}\n\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n", optionName)
 		case "Data":
 			return "\treturn NewConstrPlutusData(0, v.Value), nil\n"
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
-				return "\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n"
+				return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected %s)\")\n\t}\n\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n", optionName, g.normalizeTypeName(refName))
 			}
 			if g.isPrimitiveWrapper(refName, "integer") {
-				return "\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n"
+				return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected %s)\")\n\t}\n\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n", optionName, g.normalizeTypeName(refName))
 			}
 		}
 	}
 
 	if innerSchema != nil && innerSchema.IsInteger() {
-		return "\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n"
+		return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected integer)\")\n\t}\n\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n", optionName)
 	}
 
 	if innerSchema != nil && innerSchema.IsBytes() {
-		return "\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n"
+		return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected bytes)\")\n\t}\n\treturn NewConstrPlutusData(0, NewBytesPlutusData(v.Value)), nil\n", optionName)
 	}
 
 	// Complex inner type - need to check for nil enum
@@ -325,23 +325,23 @@ func (g *Generator) getWrapperToPlutusDataCode(field *Schema, constrIndex int) s
 		refName := field.RefName()
 		switch refName {
 		case "Int":
-			return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", constrIndex)
+			return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected Int)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", constrIndex)
 		case "ByteArray":
-			return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", constrIndex)
+			return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected ByteArray)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", constrIndex)
 		case "Data":
 			return fmt.Sprintf("\treturn NewConstrPlutusData(%d, v.Value), nil\n", constrIndex)
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
-				return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", constrIndex)
+				return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected %s)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", g.normalizeTypeName(refName), constrIndex)
 			}
 			if g.isPrimitiveWrapper(refName, "integer") {
-				return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", constrIndex)
+				return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected %s)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", g.normalizeTypeName(refName), constrIndex)
 			}
 		}
 	case field.IsInteger():
-		return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", constrIndex)
+		return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected integer)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewIntPlutusData(v.Value)), nil\n", constrIndex)
 	case field.IsBytes():
-		return fmt.Sprintf("\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", constrIndex)
+		return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: value is nil (expected bytes)\")\n\t}\n\treturn NewConstrPlutusData(%d, NewBytesPlutusData(v.Value)), nil\n", constrIndex)
 	}
 	// Complex type
 	return fmt.Sprintf("\tinner, err := v.Value.ToPlutusData()\n\tif err != nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"Value: %%w\", err)\n\t}\n\treturn NewConstrPlutusData(%d, inner), nil\n", constrIndex)
@@ -833,8 +833,18 @@ func (g *Generator) writeFieldToPlutusData(fieldName string, schema *Schema, ind
 		refName := schema.RefName()
 		switch refName {
 		case "Int":
+			g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected Int)")`, fieldName))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewIntPlutusData(v.%s)", index, fieldName))
 		case "ByteArray":
+			g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected ByteArray)")`, fieldName))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewBytesPlutusData(v.%s)", index, fieldName))
 		case "Bool":
 			g.writeLine(fmt.Sprintf("if v.%s {", fieldName))
@@ -861,9 +871,19 @@ func (g *Generator) writeFieldToPlutusData(fieldName string, schema *Schema, ind
 				g.writeOptionRefToPlutusData(fieldName, refName, index)
 			} else if g.isPrimitiveWrapper(refName, "bytes") {
 				// Primitive wrapper for bytes
+				g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+				g.indentInc()
+				g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected %s)")`, fieldName, g.normalizeTypeName(refName)))
+				g.indentDec()
+				g.writeLine("}")
 				g.writeLine(fmt.Sprintf("fields[%d] = NewBytesPlutusData(v.%s)", index, fieldName))
 			} else if g.isPrimitiveWrapper(refName, "integer") {
 				// Primitive wrapper for integer
+				g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+				g.indentInc()
+				g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected %s)")`, fieldName, g.normalizeTypeName(refName)))
+				g.indentDec()
+				g.writeLine("}")
 				g.writeLine(fmt.Sprintf("fields[%d] = NewIntPlutusData(v.%s)", index, fieldName))
 			} else {
 				// Custom type with ToPlutusData
@@ -885,8 +905,18 @@ func (g *Generator) writeFieldToPlutusData(fieldName string, schema *Schema, ind
 			}
 		}
 	case schema.IsInteger():
+		g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected integer)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewIntPlutusData(v.%s)", index, fieldName))
 	case schema.IsBytes():
+		g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s: value is nil (expected bytes)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewBytesPlutusData(v.%s)", index, fieldName))
 	case schema.IsList():
 		g.writeLine(fmt.Sprintf("list%d := make([]PlutusData, len(v.%s))", index, fieldName))
@@ -1326,15 +1356,40 @@ func (g *Generator) writeOptionSomeValue(fieldName string, inner *Schema, index 
 		refName := inner.RefName()
 		switch refName {
 		case "Int":
+			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected Int)")`, fieldName))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewIntPlutusData(v.%s.Value))", index, fieldName))
 		case "ByteArray":
+			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected ByteArray)")`, fieldName))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
 		default:
+			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected %s)")`, fieldName, g.normalizeTypeName(refName)))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
 		}
 	case inner.IsInteger():
+		g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected integer)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewIntPlutusData(v.%s.Value))", index, fieldName))
 	case inner.IsBytes():
+		g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected bytes)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
 	}
 }
@@ -1349,13 +1404,33 @@ func (g *Generator) writeOptionRefToPlutusData(fieldName string, refName string,
 
 	switch innerRef {
 	case "Int":
+		g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected Int)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewIntPlutusData(v.%s.Value))", index, fieldName))
 	case "ByteArray":
+		g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected ByteArray)")`, fieldName))
+		g.indentDec()
+		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
 	default:
 		if g.isPrimitiveWrapper(innerRef, "bytes") {
+			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected %s)")`, fieldName, g.normalizeTypeName(innerRef)))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
 		} else if g.isPrimitiveWrapper(innerRef, "integer") {
+			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value: value is nil but IsSet is true (expected %s)")`, fieldName, g.normalizeTypeName(innerRef)))
+			g.indentDec()
+			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewIntPlutusData(v.%s.Value))", index, fieldName))
 		} else {
 			// Complex inner type - call ToPlutusData
