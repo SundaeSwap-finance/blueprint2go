@@ -2191,28 +2191,38 @@ func (g *Generator) writeTupleType(name string, schema *Schema) error {
 	g.writeLine("}")
 	g.writeLine("")
 
-	// FromPlutusData - tuples use Constr 0, not List
+	// FromPlutusData - tuples can be encoded as Constr 0 [fields...] or List [items...]
+	// depending on how the Aiken type is defined (@list decorator or not)
 	g.writeLine(fmt.Sprintf("func (v *%s) FromPlutusData(pd PlutusData) error {", name))
 	g.indentInc()
-	g.writeLine("if pd.Constr == nil {")
+	g.writeLine("var fields []PlutusData")
+	g.writeLine("if pd.Constr != nil {")
 	g.indentInc()
-	g.writeLine(fmt.Sprintf(`return errors.New("expected constructor for %s")`, name))
-	g.indentDec()
-	g.writeLine("}")
 	g.writeLine("if pd.Constr.Index != 0 {")
 	g.indentInc()
 	g.writeLine(fmt.Sprintf(`return fmt.Errorf("wrong constructor index for %s: expected 0, got %%d", pd.Constr.Index)`, name))
 	g.indentDec()
 	g.writeLine("}")
-	g.writeLine(fmt.Sprintf("if len(pd.Constr.Fields) != %d {", len(schema.Items)))
+	g.writeLine("fields = pd.Constr.Fields")
+	g.indentDec()
+	g.writeLine("} else if pd.List != nil {")
 	g.indentInc()
-	g.writeLine(fmt.Sprintf(`return fmt.Errorf("wrong number of fields for %s: expected %d, got %%d", len(pd.Constr.Fields))`, name, len(schema.Items)))
+	g.writeLine("fields = pd.List")
+	g.indentDec()
+	g.writeLine("} else {")
+	g.indentInc()
+	g.writeLine(fmt.Sprintf(`return errors.New("expected constructor or list for %s")`, name))
+	g.indentDec()
+	g.writeLine("}")
+	g.writeLine(fmt.Sprintf("if len(fields) != %d {", len(schema.Items)))
+	g.indentInc()
+	g.writeLine(fmt.Sprintf(`return fmt.Errorf("wrong number of fields for %s: expected %d, got %%d", len(fields))`, name, len(schema.Items)))
 	g.indentDec()
 	g.writeLine("}")
 
 	for i, item := range schema.Items {
 		fieldName := fieldNames[i]
-		g.writeTupleFieldFromPlutusData(fieldName, item, i)
+		g.writeTupleFieldFromPlutusDataWithSource(fieldName, item, i, "fields")
 	}
 
 	g.writeLine("return nil")
@@ -2606,7 +2616,11 @@ func (g *Generator) writeTupleFieldToPlutusData(fieldName string, item *Schema, 
 }
 
 func (g *Generator) writeTupleFieldFromPlutusData(fieldName string, item *Schema, index int) {
-	source := fmt.Sprintf("pd.Constr.Fields[%d]", index)
+	g.writeTupleFieldFromPlutusDataWithSource(fieldName, item, index, "pd.Constr.Fields")
+}
+
+func (g *Generator) writeTupleFieldFromPlutusDataWithSource(fieldName string, item *Schema, index int, sourceSlice string) {
+	source := fmt.Sprintf("%s[%d]", sourceSlice, index)
 	target := fmt.Sprintf("v.%s", fieldName)
 	errInt := fmt.Sprintf("field %s: expected integer", fieldName)
 	errBytes := fmt.Sprintf("field %s: expected bytes", fieldName)
@@ -2625,7 +2639,7 @@ func (g *Generator) writeTupleFieldFromPlutusData(fieldName string, item *Schema
 			} else if g.isPrimitiveWrapper(refName, "integer") {
 				g.writeIntegerDecode(source, target, errInt)
 			} else {
-				g.writeLine(fmt.Sprintf("if err := v.%s.FromPlutusData(pd.Constr.Fields[%d]); err != nil {", fieldName, index))
+				g.writeLine(fmt.Sprintf("if err := v.%s.FromPlutusData(%s[%d]); err != nil {", fieldName, sourceSlice, index))
 				g.indentInc()
 				g.writeLine("return err")
 				g.indentDec()
@@ -2637,7 +2651,7 @@ func (g *Generator) writeTupleFieldFromPlutusData(fieldName string, item *Schema
 	case item.IsBytes():
 		g.writeBytesDecode(source, target, errBytes)
 	default:
-		g.writeLine(fmt.Sprintf("if err := v.%s.FromPlutusData(pd.Constr.Fields[%d]); err != nil {", fieldName, index))
+		g.writeLine(fmt.Sprintf("if err := v.%s.FromPlutusData(%s[%d]); err != nil {", fieldName, sourceSlice, index))
 		g.indentInc()
 		g.writeLine("return err")
 		g.indentDec()

@@ -72,9 +72,13 @@ func TestAdvancedTypes(t *testing.T) {
 		if !strings.Contains(code, "AssetName []byte") {
 			t.Error("Expected AssetName field in tuple struct")
 		}
-		// Tuple should use list serialization
-		if !strings.Contains(code, "NewListPlutusData(items...)") {
-			t.Error("Expected tuple to use list serialization")
+		// Tuple ToPlutusData should use Constr 0 serialization
+		if !strings.Contains(code, "return NewConstrPlutusData(0, fields...), nil") {
+			t.Error("Expected tuple to use Constr 0 serialization")
+		}
+		// Tuple FromPlutusData should accept both Constr and List (for @list types)
+		if !strings.Contains(code, "} else if pd.List != nil {") {
+			t.Error("Expected tuple FromPlutusData to accept List as fallback")
 		}
 	})
 

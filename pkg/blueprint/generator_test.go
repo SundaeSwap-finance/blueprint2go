@@ -368,9 +368,11 @@ require github.com/x448/float16 v0.8.4 // indirect
 }
 
 func TestTupleUsesConstrNotList(t *testing.T) {
-	// In Plutus/Aiken, tuples are encoded as Constr 0 [fields...], not as List [fields...]
-	// This test verifies that generated code for tuple types uses NewConstrPlutusData(0, ...)
-	// instead of NewListPlutusData(...)
+	// In Plutus/Aiken, tuples can be encoded as Constr 0 [fields...] or List [items...]
+	// depending on whether the Aiken type uses @list decorator.
+	// This test verifies that generated code:
+	// - ToPlutusData uses NewConstrPlutusData(0, ...) for output
+	// - FromPlutusData accepts BOTH Constr 0 and List for input
 
 	bp, err := LoadBlueprint("../../testdata/tuple/plutus.json")
 	if err != nil {
@@ -401,13 +403,15 @@ func TestTupleUsesConstrNotList(t *testing.T) {
 		t.Error("expected to find TupleIntBytearray.ToPlutusData() method")
 	}
 
-	// FromPlutusData should check for Constr, not List
+	// FromPlutusData should accept BOTH Constr 0 and List (for @list decorated types)
 	if strings.Contains(code, "func (v *TupleIntBytearray) FromPlutusData(pd PlutusData)") {
-		if strings.Contains(code, "if pd.List == nil") {
-			t.Error("TupleIntBytearray.FromPlutusData() should check pd.Constr for tuples, not pd.List")
+		// Should check for Constr first
+		if !strings.Contains(code, "if pd.Constr != nil") {
+			t.Error("TupleIntBytearray.FromPlutusData() should check pd.Constr != nil")
 		}
-		if !strings.Contains(code, "if pd.Constr == nil") {
-			t.Error("TupleIntBytearray.FromPlutusData() is missing pd.Constr check")
+		// Should also accept List as fallback
+		if !strings.Contains(code, "} else if pd.List != nil {") {
+			t.Error("TupleIntBytearray.FromPlutusData() should accept pd.List as fallback for @list types")
 		}
 	} else {
 		t.Error("expected to find TupleIntBytearray.FromPlutusData() method")
