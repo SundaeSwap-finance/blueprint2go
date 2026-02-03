@@ -367,12 +367,12 @@ require github.com/x448/float16 v0.8.4 // indirect
 	}
 }
 
-func TestTupleUsesConstrNotList(t *testing.T) {
-	// In Plutus/Aiken, tuples can be encoded as Constr 0 [fields...] or List [items...]
-	// depending on whether the Aiken type uses @list decorator.
+func TestTupleUsesListEncoding(t *testing.T) {
+	// Tuples with dataType "list" in the blueprint should be encoded as CBOR lists.
+	// This matches Aiken types with @list decorator or explicit list encoding.
 	// This test verifies that generated code:
-	// - ToPlutusData uses NewConstrPlutusData(0, ...) for output
-	// - FromPlutusData accepts BOTH Constr 0 and List for input
+	// - ToPlutusData uses NewListPlutusData(...) for output (matches dataType: "list")
+	// - FromPlutusData accepts BOTH List and Constr 0 for input (flexibility)
 
 	bp, err := LoadBlueprint("../../testdata/tuple/plutus.json")
 	if err != nil {
@@ -390,20 +390,18 @@ func TestTupleUsesConstrNotList(t *testing.T) {
 		t.Fatal("expected to find TupleIntBytearray struct in generated code")
 	}
 
-	// ToPlutusData should use NewConstrPlutusData(0, ...) NOT NewListPlutusData(...)
-	// because tuples in Plutus are Constr 0 [fields...], not List [fields...]
+	// ToPlutusData should use NewListPlutusData(...) because the blueprint
+	// defines these types with dataType: "list"
 	if strings.Contains(code, "func (v TupleIntBytearray) ToPlutusData()") {
-		if strings.Contains(code, "return NewListPlutusData(items...), nil") {
-			t.Error("TupleIntBytearray.ToPlutusData() should use NewConstrPlutusData(0, fields...) for tuples, not NewListPlutusData(items...)")
-		}
-		if !strings.Contains(code, "return NewConstrPlutusData(0, fields...), nil") {
-			t.Error("TupleIntBytearray.ToPlutusData() is missing NewConstrPlutusData(0, fields...)")
+		if !strings.Contains(code, "return NewListPlutusData(items...), nil") {
+			t.Error("TupleIntBytearray.ToPlutusData() should use NewListPlutusData(items...) for tuple types with dataType: list")
 		}
 	} else {
 		t.Error("expected to find TupleIntBytearray.ToPlutusData() method")
 	}
 
-	// FromPlutusData should accept BOTH Constr 0 and List (for @list decorated types)
+	// FromPlutusData should accept BOTH Constr 0 and List for flexibility
+	// (some systems may still encode tuples as constructors)
 	if strings.Contains(code, "func (v *TupleIntBytearray) FromPlutusData(pd PlutusData)") {
 		// Should check for Constr first
 		if !strings.Contains(code, "if pd.Constr != nil") {
@@ -411,7 +409,7 @@ func TestTupleUsesConstrNotList(t *testing.T) {
 		}
 		// Should also accept List as fallback
 		if !strings.Contains(code, "} else if pd.List != nil {") {
-			t.Error("TupleIntBytearray.FromPlutusData() should accept pd.List as fallback for @list types")
+			t.Error("TupleIntBytearray.FromPlutusData() should accept pd.List as fallback")
 		}
 	} else {
 		t.Error("expected to find TupleIntBytearray.FromPlutusData() method")
