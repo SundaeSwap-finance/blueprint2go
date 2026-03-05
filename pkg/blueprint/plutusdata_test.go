@@ -2,6 +2,7 @@ package blueprint
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"math/big"
 	"testing"
 )
@@ -244,6 +245,89 @@ func TestPlutusData_RoundTrip(t *testing.T) {
 	if !original.Equals(decoded) {
 		t.Error("round-trip failed: values don't match")
 	}
+}
+
+func TestPlutusData_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		pd       PlutusData
+		expected string
+	}{
+		{
+			name:     "Integer",
+			pd:       NewIntPlutusData(big.NewInt(42)),
+			expected: `{"int":"42"}`,
+		},
+		{
+			name:     "ByteString",
+			pd:       NewBytesPlutusData([]byte{0xde, 0xad}),
+			expected: `{"bytes":"dead"}`,
+		},
+		{
+			name: "Constructor",
+			pd: NewConstrPlutusData(0,
+				NewIntPlutusData(big.NewInt(1)),
+			),
+			expected: `{"constructor":0,"fields":[{"int":"1"}]}`,
+		},
+		{
+			name: "List",
+			pd: NewListPlutusData(
+				NewIntPlutusData(big.NewInt(1)),
+				NewIntPlutusData(big.NewInt(2)),
+			),
+			expected: `{"list":[{"int":"1"},{"int":"2"}]}`,
+		},
+		{
+			name: "Map",
+			pd: NewMapPlutusData(
+				PlutusDataMapEntry{
+					Key:   NewBytesPlutusData([]byte{0xab}),
+					Value: NewIntPlutusData(big.NewInt(10)),
+				},
+			),
+			expected: `{"map":[{"k":{"bytes":"ab"},"v":{"int":"10"}}]}`,
+		},
+		{
+			name:     "EmptyConstructor",
+			pd:       NewConstrPlutusData(0),
+			expected: `{"constructor":0,"fields":[]}`,
+		},
+		{
+			name:     "EmptyList",
+			pd:       NewListPlutusData(),
+			expected: `{"list":[]}`,
+		},
+		{
+			name:     "EmptyMap",
+			pd:       NewMapPlutusData(),
+			expected: `{"map":[]}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(tt.pd)
+			if err != nil {
+				t.Fatalf("MarshalJSON failed: %v", err)
+			}
+			if string(got) != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, string(got))
+			}
+		})
+	}
+
+	// Test nil PlutusData marshals to "null"
+	t.Run("NilPlutusData", func(t *testing.T) {
+		pd := PlutusData{}
+		got, err := json.Marshal(pd)
+		if err != nil {
+			t.Fatalf("MarshalJSON failed: %v", err)
+		}
+		if string(got) != "null" {
+			t.Errorf("expected null, got %s", string(got))
+		}
+	})
 }
 
 func TestPlutusData_IndefiniteLengthArrays(t *testing.T) {

@@ -17,3 +17,7 @@ func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
 	}
 	return nil
 }
+
+func (v {{.Name}}) MarshalJSON() ([]byte, error) {
+	return []byte(`"unit"`), nil
+}

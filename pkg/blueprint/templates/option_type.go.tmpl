@@ -45,3 +45,9 @@ func (v {{.Name}}) Equals(other {{.Name}}) bool {
 		return true // Both are None
 	}
 {{.EqualsInner}}}
+
+func (v {{.Name}}) MarshalJSON() ([]byte, error) {
+	if !v.IsSet {
+		return []byte("null"), nil
+	}
+{{.MarshalJSONInner}}}

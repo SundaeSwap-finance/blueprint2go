@@ -162,6 +162,7 @@ func (g *Generator) writeOptionType(name string, schema *Schema) error {
 	toPlutusDataInner := g.getOptionInnerToPlutusDataCode(name, schema)
 	fromPlutusDataInner := g.getOptionInnerFromPlutusDataCode(name, schema)
 	equalsInner := g.getOptionEqualsCode(schema)
+	marshalJSONInner := g.getOptionMarshalJSONCode(schema)
 
 	g.executeTemplate("option_type.go.tmpl", map[string]string{
 		"Name":                name,
@@ -169,6 +170,7 @@ func (g *Generator) writeOptionType(name string, schema *Schema) error {
 		"ToPlutusDataInner":   toPlutusDataInner,
 		"FromPlutusDataInner": fromPlutusDataInner,
 		"EqualsInner":         equalsInner,
+		"MarshalJSONInner":    marshalJSONInner,
 	})
 	g.writeLine("")
 
@@ -319,6 +321,73 @@ func (g *Generator) getOptionEqualsCode(schema *Schema) string {
 	return "\treturn v.Value.Equals(other.Value)\n"
 }
 
+func (g *Generator) getOptionMarshalJSONCode(schema *Schema) string {
+	var innerSchema *Schema
+	if len(schema.AnyOf) > 0 && len(schema.AnyOf[0].Fields) > 0 {
+		innerSchema = &schema.AnyOf[0].Fields[0]
+	}
+
+	if innerSchema != nil && innerSchema.IsRef() {
+		refName := innerSchema.RefName()
+		switch refName {
+		case "Int":
+			return "\treturn json.Marshal(v.Value.String())\n"
+		case "ByteArray":
+			return "\treturn json.Marshal(hex.EncodeToString(v.Value))\n"
+		default:
+			if g.isPrimitiveWrapper(refName, "bytes") {
+				return "\treturn json.Marshal(hex.EncodeToString(v.Value))\n"
+			}
+			if g.isPrimitiveWrapper(refName, "integer") {
+				return "\treturn json.Marshal(v.Value.String())\n"
+			}
+		}
+	}
+
+	if innerSchema != nil && innerSchema.IsInteger() {
+		return "\treturn json.Marshal(v.Value.String())\n"
+	}
+
+	if innerSchema != nil && innerSchema.IsBytes() {
+		return "\treturn json.Marshal(hex.EncodeToString(v.Value))\n"
+	}
+
+	return "\treturn json.Marshal(v.Value)\n"
+}
+
+func (g *Generator) getWrapperMarshalJSONCode(variantTitle string, field *Schema) string {
+	var valueMarshal string
+	switch {
+	case field.IsRef():
+		refName := field.RefName()
+		switch refName {
+		case "Int":
+			valueMarshal = "v.Value.String()"
+		case "ByteArray":
+			valueMarshal = "hex.EncodeToString(v.Value)"
+		default:
+			if g.isPrimitiveWrapper(refName, "bytes") {
+				valueMarshal = "hex.EncodeToString(v.Value)"
+			} else if g.isPrimitiveWrapper(refName, "integer") {
+				valueMarshal = "v.Value.String()"
+			} else {
+				valueMarshal = "v.Value"
+			}
+		}
+	case field.IsInteger():
+		valueMarshal = "v.Value.String()"
+	case field.IsBytes():
+		valueMarshal = "hex.EncodeToString(v.Value)"
+	default:
+		valueMarshal = "v.Value"
+	}
+
+	if variantTitle != "" {
+		return fmt.Sprintf("\treturn json.Marshal(map[string]interface{}{\"constructor\": %q, \"value\": %s})\n", variantTitle, valueMarshal)
+	}
+	return fmt.Sprintf("\treturn json.Marshal(%s)\n", valueMarshal)
+}
+
 func (g *Generator) getWrapperToPlutusDataCode(field *Schema, constrIndex int) string {
 	switch {
 	case field.IsRef():
@@ -421,7 +490,7 @@ func (g *Generator) writeBoolType(name string, _ *Schema) error {
 	return nil
 }
 
-func (g *Generator) writeStructType(name string, schema *Schema, constrIndex int) error {
+func (g *Generator) writeStructTypeWithVariant(name string, schema *Schema, constrIndex int, enumVariantName string) error {
 	// Documentation
 	if schema.Title != "" {
 		g.writeLine(fmt.Sprintf("// %s represents the Aiken %s type.", name, schema.Title))
@@ -450,7 +519,14 @@ func (g *Generator) writeStructType(name string, schema *Schema, constrIndex int
 	// Generate Equals method
 	g.writeStructEquals(name, schema)
 
+	// Generate MarshalJSON method
+	g.writeStructMarshalJSON(name, schema, enumVariantName)
+
 	return nil
+}
+
+func (g *Generator) writeStructType(name string, schema *Schema, constrIndex int) error {
+	return g.writeStructTypeWithVariant(name, schema, constrIndex, "")
 }
 
 func (g *Generator) writeStructEquals(name string, schema *Schema) {
@@ -470,6 +546,87 @@ func (g *Generator) writeStructEquals(name string, schema *Schema) {
 	g.indentDec()
 	g.writeLine("}")
 	g.writeLine("")
+}
+
+func (g *Generator) writeStructMarshalJSON(name string, schema *Schema, enumVariantName string) {
+	g.writeLine(fmt.Sprintf("func (v %s) MarshalJSON() ([]byte, error) {", name))
+	g.indentInc()
+	g.writeLine("m := map[string]interface{}{}")
+	if enumVariantName != "" {
+		g.writeLine(fmt.Sprintf(`m["constructor"] = %q`, enumVariantName))
+	}
+	for i, field := range schema.Fields {
+		fieldName := g.normalizeFieldName(field.Title, i)
+		jsonKey := field.Title
+		if jsonKey == "" {
+			jsonKey = fmt.Sprintf("field%d", i)
+		}
+		g.writeFieldMarshalJSON(fieldName, jsonKey, &field)
+	}
+	g.writeLine("return json.Marshal(m)")
+	g.indentDec()
+	g.writeLine("}")
+	g.writeLine("")
+}
+
+func (g *Generator) writeFieldMarshalJSON(fieldName, jsonKey string, schema *Schema) {
+	switch {
+	case schema.IsRef():
+		refName := schema.RefName()
+		switch refName {
+		case "Int":
+			g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+			g.indentDec()
+			g.writeLine("}")
+		case "ByteArray":
+			g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+		case "Bool":
+			g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+		case "Data":
+			g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+		default:
+			if strings.HasPrefix(refName, "List$") {
+				g.writeListFieldMarshalJSON(fieldName, jsonKey, refName)
+			} else if g.isPrimitiveWrapper(refName, "bytes") {
+				g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+			} else if g.isPrimitiveWrapper(refName, "integer") {
+				g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+				g.indentInc()
+				g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+				g.indentDec()
+				g.writeLine("}")
+			} else {
+				g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+			}
+		}
+	case schema.IsInteger():
+		g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+		g.indentDec()
+		g.writeLine("}")
+	case schema.IsBytes():
+		g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+	case schema.IsBoolean():
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+	default:
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+	}
+}
+
+func (g *Generator) writeListFieldMarshalJSON(fieldName, jsonKey, refName string) {
+	// Extract inner ref from List$X
+	inner := strings.TrimPrefix(refName, "List$")
+	inner = strings.ReplaceAll(inner, "~1", "/")
+	if inner == "ByteArray" || g.isPrimitiveWrapper(inner, "bytes") {
+		g.writeLine(fmt.Sprintf(`m[%q] = hexBytesSlice(v.%s)`, jsonKey, fieldName))
+	} else if inner == "Int" || g.isPrimitiveWrapper(inner, "integer") {
+		g.writeLine(fmt.Sprintf(`m[%q] = bigIntSlice(v.%s)`, jsonKey, fieldName))
+	} else {
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+	}
 }
 
 func (g *Generator) writeFieldEquals(fieldName string, schema *Schema) {
@@ -2032,10 +2189,11 @@ func (g *Generator) writeEnumType(name string, schema *Schema) error {
 		if len(variant.Fields) == 0 {
 			// Empty struct for enum variants without fields
 			g.executeTemplate("enum_variant_empty.go.tmpl", map[string]interface{}{
-				"VariantName": variantName,
-				"EnumName":    name,
-				"MethodName":  methodName,
-				"ConstrIndex": constrIndex,
+				"VariantName":  variantName,
+				"VariantTitle": variant.Title,
+				"EnumName":     name,
+				"MethodName":   methodName,
+				"ConstrIndex":  constrIndex,
 			})
 			g.writeLine("")
 
@@ -2043,20 +2201,21 @@ func (g *Generator) writeEnumType(name string, schema *Schema) error {
 			// Single unnamed field - wrapper type
 			fieldType := g.schemaToGoType(&variant.Fields[0])
 			g.executeTemplate("wrapper_type.go.tmpl", map[string]interface{}{
-				"Name":              variantName,
-				"EnumName":          name,
-				"FieldType":         fieldType,
-				"MethodName":        methodName,
-				"ConstrIndex":       constrIndex,
-				"ToPlutusDataInner": g.getWrapperToPlutusDataCode(&variant.Fields[0], constrIndex),
+				"Name":                variantName,
+				"EnumName":            name,
+				"FieldType":           fieldType,
+				"MethodName":          methodName,
+				"ConstrIndex":         constrIndex,
+				"ToPlutusDataInner":   g.getWrapperToPlutusDataCode(&variant.Fields[0], constrIndex),
 				"FromPlutusDataInner": g.getWrapperFromPlutusDataCode(variantName, &variant.Fields[0]),
-				"EqualsInner":       g.getWrapperEqualsCode(&variant.Fields[0]),
+				"EqualsInner":         g.getWrapperEqualsCode(&variant.Fields[0]),
+				"MarshalJSONInner":    g.getWrapperMarshalJSONCode(variant.Title, &variant.Fields[0]),
 			})
 			g.writeLine("")
 		} else {
 			// Struct with named fields
 			g.writeLine(fmt.Sprintf("// %s is a variant of %s.", variantName, name))
-			if err := g.writeStructType(variantName, &variant, constrIndex); err != nil {
+			if err := g.writeStructTypeWithVariant(variantName, &variant, constrIndex, variant.Title); err != nil {
 				return err
 			}
 			g.writeLine(fmt.Sprintf("func (%s) %s() {}", variantName, methodName))
@@ -2236,6 +2395,9 @@ func (g *Generator) writeTupleType(name string, schema *Schema) error {
 	// Equals method
 	g.writeTupleEquals(name, schema, fieldNames)
 
+	// MarshalJSON method
+	g.writeTupleMarshalJSON(name, schema, fieldNames)
+
 	return nil
 }
 
@@ -2252,6 +2414,60 @@ func (g *Generator) writeTupleEquals(name string, schema *Schema, fieldNames []s
 	g.indentDec()
 	g.writeLine("}")
 	g.writeLine("")
+}
+
+func (g *Generator) writeTupleMarshalJSON(name string, schema *Schema, fieldNames []string) {
+	g.writeLine(fmt.Sprintf("func (v %s) MarshalJSON() ([]byte, error) {", name))
+	g.indentInc()
+	g.writeLine("m := map[string]interface{}{}")
+	for i, item := range schema.Items {
+		fieldName := fieldNames[i]
+		jsonKey := strings.ToLower(fieldName[:1]) + fieldName[1:]
+		g.writeTupleFieldMarshalJSON(fieldName, jsonKey, item)
+	}
+	g.writeLine("return json.Marshal(m)")
+	g.indentDec()
+	g.writeLine("}")
+	g.writeLine("")
+}
+
+func (g *Generator) writeTupleFieldMarshalJSON(fieldName, jsonKey string, item *Schema) {
+	switch {
+	case item.IsRef():
+		refName := item.RefName()
+		switch refName {
+		case "Int":
+			g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+			g.indentDec()
+			g.writeLine("}")
+		case "ByteArray":
+			g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+		default:
+			if g.isPrimitiveWrapper(refName, "bytes") {
+				g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+			} else if g.isPrimitiveWrapper(refName, "integer") {
+				g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+				g.indentInc()
+				g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+				g.indentDec()
+				g.writeLine("}")
+			} else {
+				g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+			}
+		}
+	case item.IsInteger():
+		g.writeLine(fmt.Sprintf("if v.%s != nil {", fieldName))
+		g.indentInc()
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s.String()`, jsonKey, fieldName))
+		g.indentDec()
+		g.writeLine("}")
+	case item.IsBytes():
+		g.writeLine(fmt.Sprintf(`m[%q] = hex.EncodeToString(v.%s)`, jsonKey, fieldName))
+	default:
+		g.writeLine(fmt.Sprintf(`m[%q] = v.%s`, jsonKey, fieldName))
+	}
 }
 
 func (g *Generator) writeTupleFieldEquals(fieldName string, item *Schema) {
@@ -2365,7 +2581,53 @@ func (g *Generator) writeListTypeAlias(name string, schema *Schema) error {
 	// Equals method
 	g.writeListAliasEquals(name, innerSchema)
 
+	// MarshalJSON method (only for primitive inner types that need conversion)
+	g.writeListAliasMarshalJSON(name, innerSchema)
+
 	return nil
+}
+
+func (g *Generator) writeListAliasMarshalJSON(name string, innerSchema *Schema) {
+	needsMarshal := false
+	var body string
+
+	isBytes := func(s *Schema) bool {
+		if s.IsBytes() {
+			return true
+		}
+		if s.IsRef() {
+			return s.RefName() == "ByteArray" || g.isPrimitiveWrapper(s.RefName(), "bytes")
+		}
+		return false
+	}
+	isInt := func(s *Schema) bool {
+		if s.IsInteger() {
+			return true
+		}
+		if s.IsRef() {
+			return s.RefName() == "Int" || g.isPrimitiveWrapper(s.RefName(), "integer")
+		}
+		return false
+	}
+
+	if isBytes(innerSchema) {
+		needsMarshal = true
+		body = "return json.Marshal(hexBytesSlice(v))"
+	} else if isInt(innerSchema) {
+		needsMarshal = true
+		body = "return json.Marshal(bigIntSlice(v))"
+	}
+
+	if !needsMarshal {
+		return
+	}
+
+	g.writeLine(fmt.Sprintf("func (v %s) MarshalJSON() ([]byte, error) {", name))
+	g.indentInc()
+	g.writeLine(body)
+	g.indentDec()
+	g.writeLine("}")
+	g.writeLine("")
 }
 
 func (g *Generator) writeListAliasEquals(name string, innerSchema *Schema) {

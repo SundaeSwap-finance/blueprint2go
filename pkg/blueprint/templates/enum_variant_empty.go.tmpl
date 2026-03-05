@@ -20,3 +20,7 @@ func (v *{{.VariantName}}) FromPlutusData(pd PlutusData) error {
 func (v {{.VariantName}}) Equals(other {{.VariantName}}) bool {
 	return true
 }
+
+func (v {{.VariantName}}) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{"constructor": "{{.VariantTitle}}"})
+}

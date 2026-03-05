@@ -2,6 +2,8 @@ package blueprint
 
 import (
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -66,6 +68,78 @@ func NewMapPlutusData(entries ...PlutusDataMapEntry) PlutusData {
 		entries = []PlutusDataMapEntry{}
 	}
 	return PlutusData{Map: entries}
+}
+
+// MarshalJSON serializes PlutusData to Cardano JSON format.
+func (p PlutusData) MarshalJSON() ([]byte, error) {
+	switch {
+	case p.Constr != nil:
+		fields := make([]PlutusData, len(p.Constr.Fields))
+		copy(fields, p.Constr.Fields)
+		return json.Marshal(struct {
+			Constructor uint64      `json:"constructor"`
+			Fields      []PlutusData `json:"fields"`
+		}{
+			Constructor: p.Constr.Index,
+			Fields:      fields,
+		})
+	case p.Integer != nil:
+		return json.Marshal(struct {
+			Int string `json:"int"`
+		}{
+			Int: p.Integer.String(),
+		})
+	case p.ByteString != nil:
+		return json.Marshal(struct {
+			Bytes string `json:"bytes"`
+		}{
+			Bytes: hex.EncodeToString(p.ByteString),
+		})
+	case p.List != nil:
+		return json.Marshal(struct {
+			List []PlutusData `json:"list"`
+		}{
+			List: p.List,
+		})
+	case p.Map != nil:
+		type mapEntry struct {
+			K PlutusData `json:"k"`
+			V PlutusData `json:"v"`
+		}
+		entries := make([]mapEntry, len(p.Map))
+		for i, e := range p.Map {
+			entries[i] = mapEntry{K: e.Key, V: e.Value}
+		}
+		return json.Marshal(struct {
+			Map []mapEntry `json:"map"`
+		}{
+			Map: entries,
+		})
+	default:
+		return []byte("null"), nil
+	}
+}
+
+// hexBytesSlice converts a slice of byte slices to a slice of hex strings.
+func hexBytesSlice(bs [][]byte) []string {
+	result := make([]string, len(bs))
+	for i, b := range bs {
+		result[i] = hex.EncodeToString(b)
+	}
+	return result
+}
+
+// bigIntSlice converts a slice of big.Int pointers to a slice of decimal strings.
+func bigIntSlice(is []*big.Int) []string {
+	result := make([]string, len(is))
+	for i, v := range is {
+		if v != nil {
+			result[i] = v.String()
+		} else {
+			result[i] = "0"
+		}
+	}
+	return result
 }
 
 // MarshalCBOR serializes PlutusData to CBOR bytes using indefinite-length arrays.
@@ -288,3 +362,5 @@ var _ = errors.New
 var _ = big.NewInt
 var _ = PlutusData{}
 var _ = reflect.DeepEqual
+var _ = hex.EncodeToString
+var _ = json.Marshal

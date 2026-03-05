@@ -23,3 +23,7 @@ func {{.Name}}FromPlutusData(pd PlutusData) ({{.Name}}, error) {
 	}
 	return {{.Name}}(pd.Constr.Index == 1), nil
 }
+
+func (v {{.Name}}) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bool(v))
+}

@@ -23,3 +23,6 @@ func (v *{{.Name}}) FromPlutusData(pd PlutusData) error {
 
 func (v {{.Name}}) Equals(other {{.Name}}) bool {
 {{.EqualsInner}}}
+
+func (v {{.Name}}) MarshalJSON() ([]byte, error) {
+{{.MarshalJSONInner}}}
