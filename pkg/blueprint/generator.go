@@ -3051,7 +3051,7 @@ func (g *Generator) normalizeTypeName(name string) string {
 	// Examples:
 	//   Option$string_validator/SimpleString -> OptionStringValidatorSimpleString
 	//   Option$custom/Credential -> OptionCustomCredential
-	//   v0_3/types/Settings -> V03TypesSettings
+	//   v0_3/types/Settings -> V0_3TypesSettings
 	//   Option$Int -> OptionInt
 	//   List$Int -> ListInt
 
@@ -3103,6 +3103,22 @@ func (g *Generator) toGoIdentifier(s string) string {
 	return string(runes)
 }
 
+func isDigitString(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return len(s) > 0
+}
+
+func endsWithDigit(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	return unicode.IsDigit(rune(s[len(s)-1]))
+}
+
 func (g *Generator) snakeToCamel(s string) string {
 	if !strings.Contains(s, "_") {
 		if len(s) > 0 {
@@ -3116,7 +3132,16 @@ func (g *Generator) snakeToCamel(s string) string {
 			parts[i] = strings.ToUpper(part[:1]) + strings.ToLower(part[1:])
 		}
 	}
-	return strings.Join(parts, "")
+	// Join parts, preserving underscores between segments where a digit
+	// boundary would be ambiguous (e.g., v1_0 -> V1_0, not V10)
+	var result strings.Builder
+	for i, part := range parts {
+		if i > 0 && endsWithDigit(parts[i-1]) && isDigitString(part) {
+			result.WriteString("_")
+		}
+		result.WriteString(part)
+	}
+	return result.String()
 }
 
 func (g *Generator) unescapeRef(ref string) string {

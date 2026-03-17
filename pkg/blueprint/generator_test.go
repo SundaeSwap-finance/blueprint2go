@@ -367,6 +367,69 @@ require github.com/x448/float16 v0.8.4 // indirect
 	}
 }
 
+func TestSnakeToCamelPreservesNumericSeparators(t *testing.T) {
+	gen := &Generator{}
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"v1_0", "V1_0"},
+		{"v0_3", "V0_3"},
+		{"v1_0_0", "V1_0_0"},
+		{"hello_world", "HelloWorld"},
+		{"some_thing_2", "SomeThing2"},
+		{"1_0", "1_0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := gen.snakeToCamel(tt.input)
+			if got != tt.expected {
+				t.Errorf("snakeToCamel(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestToGoIdentifierVersionStrings(t *testing.T) {
+	gen := &Generator{}
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"v1.0", "V1_0"},
+		{"v0.3", "V0_3"},
+		{"v1.0.0", "V1_0_0"},
+		{"hello-world", "HelloWorld"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := gen.toGoIdentifier(tt.input)
+			if got != tt.expected {
+				t.Errorf("toGoIdentifier(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNormalizeTypeNameVersionedPaths(t *testing.T) {
+	gen := &Generator{}
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"v1_0~1types~1ProxyDatumV1", "V1_0TypesProxyDatumV1"},
+		{"v0_3~1types~1Settings", "V0_3TypesSettings"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := gen.normalizeTypeName(tt.input)
+			if got != tt.expected {
+				t.Errorf("normalizeTypeName(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestTupleUsesListEncoding(t *testing.T) {
 	// Tuples with dataType "list" in the blueprint should be encoded as CBOR lists.
 	// This matches Aiken types with @list decorator or explicit list encoding.
