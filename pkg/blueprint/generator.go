@@ -2282,20 +2282,8 @@ func (g *Generator) getTupleFieldNames(items []*Schema) []string {
 	for i, item := range items {
 		var fieldName string
 		if item.IsRef() {
-			// Extract type name from ref (e.g., "#/definitions/cardano~1assets~1PolicyId" -> "PolicyId")
 			refName := item.RefName()
-			// Get the last part after any slashes or tildes
-			parts := strings.Split(refName, "/")
-			fieldName = parts[len(parts)-1]
-			// Also handle tilde-encoded slashes
-			if strings.Contains(fieldName, "~1") {
-				subParts := strings.Split(fieldName, "~1")
-				fieldName = subParts[len(subParts)-1]
-			}
-			// Capitalize first letter
-			if len(fieldName) > 0 {
-				fieldName = strings.ToUpper(fieldName[:1]) + fieldName[1:]
-			}
+			fieldName = g.normalizeTypeName(refName)
 		}
 
 		// Fallback to Field0, Field1, etc. if no name or empty
@@ -3082,7 +3070,7 @@ func (g *Generator) normalizeFieldName(name string, index int) string {
 	if name == "" {
 		return fmt.Sprintf("Field%d", index)
 	}
-	return g.toGoIdentifier(name)
+	return g.normalizeTypeName(name)
 }
 
 func (g *Generator) toGoIdentifier(s string) string {

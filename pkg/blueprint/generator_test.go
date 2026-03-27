@@ -430,6 +430,26 @@ func TestNormalizeTypeNameVersionedPaths(t *testing.T) {
 	}
 }
 
+func TestNormalizeFieldNameRemovesDollarSign(t *testing.T) {
+	gen := &Generator{}
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"Tuple$ByteArray_ByteArray_Int", "TupleBytearrayBytearrayInt"},
+		{"Tuple$ByteArray_ByteArray_Int2", "TupleBytearrayBytearrayInt2"},
+		{"simple_field", "SimpleField"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := gen.normalizeFieldName(tt.input, 0)
+			if got != tt.expected {
+				t.Errorf("normalizeFieldName(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestTupleUsesListEncoding(t *testing.T) {
 	// Tuples with dataType "list" in the blueprint should be encoded as CBOR lists.
 	// This matches Aiken types with @list decorator or explicit list encoding.

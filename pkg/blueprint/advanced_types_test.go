@@ -65,12 +65,12 @@ func TestAdvancedTypes(t *testing.T) {
 		if !strings.Contains(code, "type CustomAsset struct") {
 			t.Error("Expected CustomAsset tuple type to be generated as struct")
 		}
-		// Check for tuple fields - now named after their types
-		if !strings.Contains(code, "PolicyId []byte") {
-			t.Error("Expected PolicyId field in tuple struct")
+		// Check for tuple fields - now named after their normalized types (including path prefix)
+		if !strings.Contains(code, "CustomPolicyId []byte") {
+			t.Error("Expected CustomPolicyId field in tuple struct")
 		}
-		if !strings.Contains(code, "AssetName []byte") {
-			t.Error("Expected AssetName field in tuple struct")
+		if !strings.Contains(code, "CustomAssetName []byte") {
+			t.Error("Expected CustomAssetName field in tuple struct")
 		}
 		// Tuple ToPlutusData should use Constr 0 serialization
 		if !strings.Contains(code, "return NewConstrPlutusData(0, fields...), nil") {
@@ -274,8 +274,8 @@ func main() {
 
 	// Test Asset tuple type
 	asset := types.CustomAsset{
-		PolicyId:  []byte{0xab, 0xcd, 0xef, 0x12, 0x34, 0x56}, // policy id
-		AssetName: []byte("Token"),
+		CustomPolicyId:  []byte{0xab, 0xcd, 0xef, 0x12, 0x34, 0x56}, // policy id
+		CustomAssetName: []byte("Token"),
 	}
 	if err := testRoundTrip("Asset", asset, func(pd types.PlutusData) (types.CustomAsset, error) {
 		var v types.CustomAsset

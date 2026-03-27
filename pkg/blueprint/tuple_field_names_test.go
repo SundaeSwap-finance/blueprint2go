@@ -231,12 +231,66 @@ func TestTupleFieldNamesNestedPath(t *testing.T) {
 		t.Fatalf("failed to generate code: %v", err)
 	}
 
-	// Check that the last part of the path is used as field name
-	if !strings.Contains(code, "PolicyId []byte") {
-		t.Error("Expected 'PolicyId []byte' extracted from nested path")
+	// Check that the full normalized path is used as field name
+	if !strings.Contains(code, "CardanoAssetsPolicyId []byte") {
+		t.Error("Expected 'CardanoAssetsPolicyId []byte' from normalized path")
 	}
-	if !strings.Contains(code, "AssetName []byte") {
-		t.Error("Expected 'AssetName []byte' extracted from nested path")
+	if !strings.Contains(code, "CardanoAssetsAssetName []byte") {
+		t.Error("Expected 'CardanoAssetsAssetName []byte' from normalized path")
+	}
+}
+
+// TestTupleFieldNamesWithDollarSign tests that $ in ref names is removed from tuple field names
+func TestTupleFieldNamesWithDollarSign(t *testing.T) {
+	blueprintJSON := `{
+  "preamble": {
+    "title": "test/tuple_dollar",
+    "version": "1.0.0",
+    "plutusVersion": "v3"
+  },
+  "validators": [],
+  "definitions": {
+    "Int": {
+      "dataType": "integer"
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Tuple$ByteArray_ByteArray": {
+      "title": "Tuple$ByteArray_ByteArray",
+      "dataType": "list",
+      "items": [
+        {"dataType": "bytes"},
+        {"dataType": "bytes"}
+      ]
+    },
+    "Outer": {
+      "title": "Outer",
+      "dataType": "list",
+      "items": [
+        {"$ref": "#/definitions/Tuple$ByteArray_ByteArray"},
+        {"$ref": "#/definitions/Tuple$ByteArray_ByteArray"}
+      ]
+    }
+  }
+}`
+
+	bp := loadBlueprintFromJSON(t, blueprintJSON)
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "test"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	// Field names must not contain $
+	if strings.Contains(code, "$") {
+		// Find the offending lines for a clear error message
+		for _, line := range strings.Split(code, "\n") {
+			if strings.Contains(line, "$") {
+				t.Errorf("generated code contains '$': %s", strings.TrimSpace(line))
+			}
+		}
 	}
 }
 
