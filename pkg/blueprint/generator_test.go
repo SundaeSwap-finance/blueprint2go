@@ -367,6 +367,59 @@ require github.com/x448/float16 v0.8.4 // indirect
 	}
 }
 
+func TestGeneratedCodeCompilesWithPlutusDotJson(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go compiler not found, skipping compilation test")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "aiken2go_plutus_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	bp, err := LoadBlueprint("../../plutus.json")
+	if err != nil {
+		t.Fatalf("failed to load blueprint: %v", err)
+	}
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "contracts"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	outFile := filepath.Join(tmpDir, "contracts.go")
+	if err := os.WriteFile(outFile, []byte(code), 0644); err != nil {
+		t.Fatalf("failed to write generated code: %v", err)
+	}
+
+	goMod := `module testmod
+
+go 1.21
+
+require github.com/fxamacker/cbor/v2 v2.8.0
+
+require github.com/x448/float16 v0.8.4 // indirect
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = tmpDir
+	if output, err := tidyCmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy failed: %v\nOutput: %s", err, output)
+	}
+
+	cmd := exec.Command("go", "build", ".")
+	cmd.Dir = tmpDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Errorf("generated code failed to compile: %v\nOutput: %s", err, output)
+	}
+}
+
 func TestSnakeToCamelPreservesNumericSeparators(t *testing.T) {
 	gen := &Generator{}
 	tests := []struct {

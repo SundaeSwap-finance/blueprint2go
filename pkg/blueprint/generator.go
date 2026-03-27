@@ -200,6 +200,9 @@ func (g *Generator) getOptionInnerToPlutusDataCode(optionName string, schema *Sc
 			if g.isPrimitiveWrapper(refName, "integer") {
 				return fmt.Sprintf("\tif v.Value == nil {\n\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value: value is nil (expected %s)\")\n\t}\n\treturn NewConstrPlutusData(0, NewIntPlutusData(v.Value)), nil\n", optionName, g.normalizeTypeName(refName))
 			}
+			if code, ok := g.getOptionListToPlutusDataCode(optionName, refName); ok {
+				return code
+			}
 		}
 	}
 
@@ -251,6 +254,9 @@ func (g *Generator) getOptionInnerFromPlutusDataCode(optionName string, schema *
 			}
 			if g.isPrimitiveWrapper(refName, "integer") {
 				return fmt.Sprintf("\tif pd.Constr.Fields[0].Integer == nil {\n\t\treturn fmt.Errorf(\"%s: expected integer for Some value, got %%s\", plutusDataTypeString(pd.Constr.Fields[0]))\n\t}\n\tv.Value = pd.Constr.Fields[0].Integer\n", optionName)
+			}
+			if code, ok := g.getOptionListFromPlutusDataCode(optionName, refName); ok {
+				return code
 			}
 		}
 	}
@@ -306,6 +312,9 @@ func (g *Generator) getOptionEqualsCode(schema *Schema) string {
 				typeName := g.normalizeTypeName(refName)
 				return fmt.Sprintf("\treturn %sEquals(v.Value, other.Value)\n", typeName)
 			}
+			if code, ok := g.getOptionListEqualsCode(refName); ok {
+				return code
+			}
 			return "\treturn v.Value.Equals(other.Value)\n"
 		}
 	}
@@ -353,6 +362,117 @@ func (g *Generator) getOptionMarshalJSONCode(schema *Schema) string {
 	}
 
 	return "\treturn json.Marshal(v.Value)\n"
+}
+
+// resolveListInner extracts the inner element type from a List$X ref name.
+// Returns the inner type name and true if the ref is a List$, or ("", false) otherwise.
+func (g *Generator) resolveListInner(refName string) (string, bool) {
+	if !strings.HasPrefix(refName, "List$") {
+		return "", false
+	}
+	inner := strings.TrimPrefix(refName, "List$")
+	inner = strings.ReplaceAll(inner, "~1", "/")
+	return inner, true
+}
+
+// getOptionListToPlutusDataCode generates inline ToPlutusData code for Option types
+// wrapping a List$ ref (which resolves to a native Go slice).
+func (g *Generator) getOptionListToPlutusDataCode(optionName string, refName string) (string, bool) {
+	inner, ok := g.resolveListInner(refName)
+	if !ok {
+		return "", false
+	}
+	var buf strings.Builder
+	buf.WriteString("\titems := make([]PlutusData, len(v.Value))\n")
+	buf.WriteString("\tfor i, item := range v.Value {\n")
+	switch inner {
+	case "ByteArray":
+		buf.WriteString("\t\titems[i] = NewBytesPlutusData(item)\n")
+	case "Int":
+		buf.WriteString("\t\titems[i] = NewIntPlutusData(item)\n")
+	default:
+		if g.isPrimitiveWrapper(inner, "bytes") {
+			buf.WriteString("\t\titems[i] = NewBytesPlutusData(item)\n")
+		} else if g.isPrimitiveWrapper(inner, "integer") {
+			buf.WriteString("\t\titems[i] = NewIntPlutusData(item)\n")
+		} else {
+			buf.WriteString("\t\titemPd, err := item.ToPlutusData()\n")
+			buf.WriteString("\t\tif err != nil {\n")
+			buf.WriteString(fmt.Sprintf("\t\t\treturn PlutusData{}, fmt.Errorf(\"%s.Value[%%d]: %%w\", i, err)\n", optionName))
+			buf.WriteString("\t\t}\n")
+			buf.WriteString("\t\titems[i] = itemPd\n")
+		}
+	}
+	buf.WriteString("\t}\n")
+	buf.WriteString("\treturn NewConstrPlutusData(0, NewListPlutusData(items...)), nil\n")
+	return buf.String(), true
+}
+
+// getOptionListFromPlutusDataCode generates inline FromPlutusData code for Option types
+// wrapping a List$ ref (which resolves to a native Go slice).
+func (g *Generator) getOptionListFromPlutusDataCode(optionName string, refName string) (string, bool) {
+	inner, ok := g.resolveListInner(refName)
+	if !ok {
+		return "", false
+	}
+	goType := g.refToGoType(inner)
+	var buf strings.Builder
+	buf.WriteString(fmt.Sprintf("\tif pd.Constr.Fields[0].List == nil {\n\t\treturn fmt.Errorf(\"%s: expected list for Some value, got %%s\", plutusDataTypeString(pd.Constr.Fields[0]))\n\t}\n", optionName))
+	buf.WriteString(fmt.Sprintf("\tv.Value = make([]%s, len(pd.Constr.Fields[0].List))\n", goType))
+	buf.WriteString("\tfor i, item := range pd.Constr.Fields[0].List {\n")
+	switch inner {
+	case "ByteArray":
+		buf.WriteString(fmt.Sprintf("\t\tif item.ByteString == nil {\n\t\t\treturn fmt.Errorf(\"%s: list item %%d: expected bytes, got %%s\", i, plutusDataTypeString(item))\n\t\t}\n", optionName))
+		buf.WriteString("\t\tv.Value[i] = item.ByteString\n")
+	case "Int":
+		buf.WriteString(fmt.Sprintf("\t\tif item.Integer == nil {\n\t\t\treturn fmt.Errorf(\"%s: list item %%d: expected integer, got %%s\", i, plutusDataTypeString(item))\n\t\t}\n", optionName))
+		buf.WriteString("\t\tv.Value[i] = item.Integer\n")
+	default:
+		if g.isPrimitiveWrapper(inner, "bytes") {
+			buf.WriteString(fmt.Sprintf("\t\tif item.ByteString == nil {\n\t\t\treturn fmt.Errorf(\"%s: list item %%d: expected bytes, got %%s\", i, plutusDataTypeString(item))\n\t\t}\n", optionName))
+			buf.WriteString("\t\tv.Value[i] = item.ByteString\n")
+		} else if g.isPrimitiveWrapper(inner, "integer") {
+			buf.WriteString(fmt.Sprintf("\t\tif item.Integer == nil {\n\t\t\treturn fmt.Errorf(\"%s: list item %%d: expected integer, got %%s\", i, plutusDataTypeString(item))\n\t\t}\n", optionName))
+			buf.WriteString("\t\tv.Value[i] = item.Integer\n")
+		} else {
+			buf.WriteString("\t\tif err := v.Value[i].FromPlutusData(item); err != nil {\n")
+			buf.WriteString("\t\t\treturn err\n")
+			buf.WriteString("\t\t}\n")
+		}
+	}
+	buf.WriteString("\t}\n")
+	return buf.String(), true
+}
+
+// getOptionListEqualsCode generates inline Equals code for Option types
+// wrapping a List$ ref (which resolves to a native Go slice).
+func (g *Generator) getOptionListEqualsCode(refName string) (string, bool) {
+	inner, ok := g.resolveListInner(refName)
+	if !ok {
+		return "", false
+	}
+	var buf strings.Builder
+	buf.WriteString("\tif len(v.Value) != len(other.Value) {\n\t\treturn false\n\t}\n")
+	buf.WriteString("\tfor i := range v.Value {\n")
+	switch inner {
+	case "ByteArray":
+		buf.WriteString("\t\tif !bytes.Equal(v.Value[i], other.Value[i]) {\n\t\t\treturn false\n\t\t}\n")
+	case "Int":
+		buf.WriteString("\t\tif v.Value[i] == nil && other.Value[i] == nil {\n")
+		buf.WriteString("\t\t} else if v.Value[i] == nil || other.Value[i] == nil || v.Value[i].Cmp(other.Value[i]) != 0 {\n\t\t\treturn false\n\t\t}\n")
+	default:
+		if g.isPrimitiveWrapper(inner, "bytes") {
+			buf.WriteString("\t\tif !bytes.Equal(v.Value[i], other.Value[i]) {\n\t\t\treturn false\n\t\t}\n")
+		} else if g.isPrimitiveWrapper(inner, "integer") {
+			buf.WriteString("\t\tif v.Value[i] == nil && other.Value[i] == nil {\n")
+			buf.WriteString("\t\t} else if v.Value[i] == nil || other.Value[i] == nil || v.Value[i].Cmp(other.Value[i]) != 0 {\n\t\t\treturn false\n\t\t}\n")
+		} else {
+			buf.WriteString("\t\tif !v.Value[i].Equals(other.Value[i]) {\n\t\t\treturn false\n\t\t}\n")
+		}
+	}
+	buf.WriteString("\t}\n")
+	buf.WriteString("\treturn true\n")
+	return buf.String(), true
 }
 
 func (g *Generator) getWrapperMarshalJSONCode(variantTitle string, field *Schema) string {
@@ -1589,6 +1709,34 @@ func (g *Generator) writeOptionRefToPlutusData(fieldName string, refName string,
 			g.indentDec()
 			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewIntPlutusData(v.%s.Value))", index, fieldName))
+		} else if listInner, ok := g.resolveListInner(innerRef); ok {
+			// List type - inline serialization
+			g.writeLine(fmt.Sprintf("listItems := make([]PlutusData, len(v.%s.Value))", fieldName))
+			g.writeLine(fmt.Sprintf("for i, item := range v.%s.Value {", fieldName))
+			g.indentInc()
+			switch listInner {
+			case "ByteArray":
+				g.writeLine("listItems[i] = NewBytesPlutusData(item)")
+			case "Int":
+				g.writeLine("listItems[i] = NewIntPlutusData(item)")
+			default:
+				if g.isPrimitiveWrapper(listInner, "bytes") {
+					g.writeLine("listItems[i] = NewBytesPlutusData(item)")
+				} else if g.isPrimitiveWrapper(listInner, "integer") {
+					g.writeLine("listItems[i] = NewIntPlutusData(item)")
+				} else {
+					g.writeLine("itemPd, err := item.ToPlutusData()")
+					g.writeLine("if err != nil {")
+					g.indentInc()
+					g.writeLine(fmt.Sprintf(`return PlutusData{}, fmt.Errorf("field %s.Value[%%d]: %%w", i, err)`, fieldName))
+					g.indentDec()
+					g.writeLine("}")
+					g.writeLine("listItems[i] = itemPd")
+				}
+			}
+			g.indentDec()
+			g.writeLine("}")
+			g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewListPlutusData(listItems...))", index))
 		} else {
 			// Complex inner type - call ToPlutusData
 			// Check if it's an enum (interface) that could be nil
@@ -1661,6 +1809,42 @@ func (g *Generator) writeOptionRefFromPlutusData(fieldName string, refName strin
 			g.writeBytesDecode(innerSource, innerTarget, errBytes)
 		} else if g.isPrimitiveWrapper(innerRef, "integer") {
 			g.writeIntegerDecode(innerSource, innerTarget, errInt)
+		} else if listInner, ok := g.resolveListInner(innerRef); ok {
+			// List type - inline deserialization
+			innerSource := fmt.Sprintf("pd.Constr.Fields[%d].Constr.Fields[0]", index)
+			listGoType := g.refToGoType(listInner)
+			g.writeLine(fmt.Sprintf("if %s.List == nil {", innerSource))
+			g.indentInc()
+			g.writeLine(fmt.Sprintf(`return fmt.Errorf("field %s: expected list in Option Some, got %%s", plutusDataTypeString(%s))`, fieldName, innerSource))
+			g.indentDec()
+			g.writeLine("}")
+			g.writeLine(fmt.Sprintf("v.%s.Value = make([]%s, len(%s.List))", fieldName, listGoType, innerSource))
+			g.writeLine(fmt.Sprintf("for i, item := range %s.List {", innerSource))
+			g.indentInc()
+			switch listInner {
+			case "ByteArray":
+				g.writeLine(fmt.Sprintf("if item.ByteString == nil {\n\t\treturn fmt.Errorf(\"field %s: list item %%d: expected bytes, got %%s\", i, plutusDataTypeString(item))\n\t}", fieldName))
+				g.writeLine(fmt.Sprintf("v.%s.Value[i] = item.ByteString", fieldName))
+			case "Int":
+				g.writeLine(fmt.Sprintf("if item.Integer == nil {\n\t\treturn fmt.Errorf(\"field %s: list item %%d: expected integer, got %%s\", i, plutusDataTypeString(item))\n\t}", fieldName))
+				g.writeLine(fmt.Sprintf("v.%s.Value[i] = item.Integer", fieldName))
+			default:
+				if g.isPrimitiveWrapper(listInner, "bytes") {
+					g.writeLine(fmt.Sprintf("if item.ByteString == nil {\n\t\treturn fmt.Errorf(\"field %s: list item %%d: expected bytes, got %%s\", i, plutusDataTypeString(item))\n\t}", fieldName))
+					g.writeLine(fmt.Sprintf("v.%s.Value[i] = item.ByteString", fieldName))
+				} else if g.isPrimitiveWrapper(listInner, "integer") {
+					g.writeLine(fmt.Sprintf("if item.Integer == nil {\n\t\treturn fmt.Errorf(\"field %s: list item %%d: expected integer, got %%s\", i, plutusDataTypeString(item))\n\t}", fieldName))
+					g.writeLine(fmt.Sprintf("v.%s.Value[i] = item.Integer", fieldName))
+				} else {
+					g.writeLine(fmt.Sprintf("if err := v.%s.Value[i].FromPlutusData(item); err != nil {", fieldName))
+					g.indentInc()
+					g.writeLine("return err")
+					g.indentDec()
+					g.writeLine("}")
+				}
+			}
+			g.indentDec()
+			g.writeLine("}")
 		} else {
 			// Check if it's an enum type (interface)
 			unescaped := g.unescapeRef(innerRef)
