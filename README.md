@@ -1,10 +1,10 @@
-# aiken2go
+# blueprint2go
 
 Generate Go types from Aiken's CIP-0057 Plutus Blueprint for building Cardano transactions.
 
 ## Overview
 
-`aiken2go` reads Aiken's `plutus.json` blueprint files and generates **standalone** Go types that can be serialized to/from CBOR Plutus Data format. This allows you to construct datums and redeemers in Go for Cardano transactions.
+`blueprint2go` reads Aiken's `plutus.json` blueprint files and generates **standalone** Go types that can be serialized to/from CBOR Plutus Data format. This allows you to construct datums and redeemers in Go for Cardano transactions.
 
 The generated code is self-contained with no external dependencies (except for the CBOR library).
 
@@ -15,25 +15,25 @@ The generated code is self-contained with no external dependencies (except for t
 ## Installation
 
 ```bash
-go install github.com/pgrange/aiken_to_go/cmd/aiken2go@latest
+go install github.com/SundaeSwap-finance/blueprint2go/cmd/blueprint2go@latest
 ```
 
 Or build from source:
 
 ```bash
-go build -o aiken2go ./cmd/aiken2go
+go build -o blueprint2go ./cmd/blueprint2go
 ```
 
 ## Usage
 
 ```bash
-aiken2go -o types.go plutus.json
+blueprint2go -o types.go plutus.json
 ```
 
 With custom package name:
 
 ```bash
-aiken2go -o types.go -p mypackage plutus.json
+blueprint2go -o types.go -p mypackage plutus.json
 ```
 
 ### Options

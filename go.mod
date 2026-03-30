@@ -1,4 +1,4 @@
-module github.com/pgrange/aiken_to_go
+module github.com/SundaeSwap-finance/blueprint2go
 
 go 1.25.5
 

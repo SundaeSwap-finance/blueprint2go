@@ -314,7 +314,7 @@ func TestGeneratedCodeCompiles(t *testing.T) {
 	}
 
 	// Create a temporary directory for the test
-	tmpDir, err := os.MkdirTemp("", "aiken2go_test")
+	tmpDir, err := os.MkdirTemp("", "blueprint2go_test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -372,7 +372,7 @@ func TestGeneratedCodeCompilesWithPlutusDotJson(t *testing.T) {
 		t.Skip("go compiler not found, skipping compilation test")
 	}
 
-	tmpDir, err := os.MkdirTemp("", "aiken2go_plutus_test")
+	tmpDir, err := os.MkdirTemp("", "blueprint2go_plutus_test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}

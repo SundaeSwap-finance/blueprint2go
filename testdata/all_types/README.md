@@ -4,7 +4,7 @@ Test data for validating Go code generation from various Aiken types.
 
 ## Purpose
 
-This Aiken project defines a comprehensive set of types used to test the `aiken2go` code generator. The types cover:
+This Aiken project defines a comprehensive set of types used to test the `blueprint2go` code generator. The types cover:
 
 - Simple structs (single field)
 - Structs with multiple fields
@@ -16,7 +16,7 @@ This Aiken project defines a comprehensive set of types used to test the `aiken2
 
 ## Important: Updating plutus.json
 
-The `plutus.json` file is the blueprint used by `aiken2go` to generate Go types. **It is NOT automatically updated by the Go tests.**
+The `plutus.json` file is the blueprint used by `blueprint2go` to generate Go types. **It is NOT automatically updated by the Go tests.**
 
 If you modify the types in `validators/string_validator.ak`, you must manually regenerate `plutus.json`:
 
@@ -30,5 +30,5 @@ This will regenerate `plutus.json` with the updated type definitions.
 ## Files
 
 - `validators/string_validator.ak` - Aiken type definitions
-- `plutus.json` - Generated blueprint (input for aiken2go)
+- `plutus.json` - Generated blueprint (input for blueprint2go)
 - `aiken.toml` - Aiken project configuration
