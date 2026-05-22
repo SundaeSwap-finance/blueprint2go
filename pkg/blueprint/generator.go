@@ -1694,6 +1694,8 @@ func (g *Generator) writeOptionRefToPlutusData(fieldName string, refName string,
 		g.indentDec()
 		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, NewBytesPlutusData(v.%s.Value))", index, fieldName))
+	case "Data":
+		g.writeLine(fmt.Sprintf("fields[%d] = NewConstrPlutusData(0, v.%s.Value)", index, fieldName))
 	default:
 		if g.isPrimitiveWrapper(innerRef, "bytes") {
 			g.writeLine(fmt.Sprintf("if v.%s.Value == nil {", fieldName))
@@ -1804,6 +1806,8 @@ func (g *Generator) writeOptionRefFromPlutusData(fieldName string, refName strin
 		g.writeIntegerDecode(innerSource, innerTarget, errInt)
 	case "ByteArray":
 		g.writeBytesDecode(innerSource, innerTarget, errBytes)
+	case "Data":
+		g.writeLine(fmt.Sprintf("%s = %s", innerTarget, innerSource))
 	default:
 		if g.isPrimitiveWrapper(innerRef, "bytes") {
 			g.writeBytesDecode(innerSource, innerTarget, errBytes)

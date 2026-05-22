@@ -401,3 +401,155 @@ require github.com/x448/float16 v0.8.4 // indirect
 
 	t.Logf("Test output:\n%s", output)
 }
+
+// TestStructWithOptionDataField verifies that a struct containing an Option<Data>
+// field generates code that compiles and round-trips. Before the fix, the generator
+// emitted v.Field.Value.ToPlutusData() / FromPlutusData() calls on the inner
+// PlutusData, which has no such methods.
+func TestStructWithOptionDataField(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go compiler not found, skipping compilation test")
+	}
+
+	bpJSON := `{
+		"preamble": {
+			"title": "repro-option-data",
+			"version": "0.0.1",
+			"plutusVersion": "v3"
+		},
+		"validators": [],
+		"definitions": {
+			"Container": {
+				"title": "Container",
+				"anyOf": [{
+					"title": "Container",
+					"dataType": "constructor",
+					"index": 0,
+					"fields": [
+						{ "title": "payload", "$ref": "#/definitions/Option$Data" }
+					]
+				}]
+			},
+			"Option$Data": {
+				"title": "Option",
+				"anyOf": [
+					{ "title": "Some", "dataType": "constructor", "index": 0,
+					  "fields": [{ "$ref": "#/definitions/Data" }] },
+					{ "title": "None", "dataType": "constructor", "index": 1, "fields": [] }
+				]
+			},
+			"Data": { "title": "Data", "description": "Any Plutus data." }
+		}
+	}`
+
+	tmpDir, err := os.MkdirTemp("", "option_data_field_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	bpFile := filepath.Join(tmpDir, "plutus.json")
+	if err := os.WriteFile(bpFile, []byte(bpJSON), 0644); err != nil {
+		t.Fatalf("failed to write blueprint file: %v", err)
+	}
+
+	bp, err := LoadBlueprint(bpFile)
+	if err != nil {
+		t.Fatalf("failed to load blueprint: %v", err)
+	}
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "types"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	// Sanity: generated struct code must not call ToPlutusData/FromPlutusData on
+	// the raw PlutusData inside Payload.Value.
+	if strings.Contains(code, "v.Payload.Value.ToPlutusData()") {
+		t.Errorf("generated code calls ToPlutusData on raw PlutusData (Option<Data> bug):\n%s", code)
+	}
+	if strings.Contains(code, "v.Payload.Value.FromPlutusData(") {
+		t.Errorf("generated code calls FromPlutusData on raw PlutusData (Option<Data> bug):\n%s", code)
+	}
+
+	typesDir := filepath.Join(tmpDir, "types")
+	if err := os.MkdirAll(typesDir, 0755); err != nil {
+		t.Fatalf("failed to create types dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(typesDir, "types.go"), []byte(code), 0644); err != nil {
+		t.Fatalf("failed to write types file: %v", err)
+	}
+
+	testProgram := `package main
+
+import (
+	"fmt"
+	"math/big"
+	"os"
+
+	"testpkg/types"
+)
+
+func main() {
+	original := types.Container{
+		Payload: types.OptionData{
+			IsSet: true,
+			Value: types.NewIntPlutusData(big.NewInt(42)),
+		},
+	}
+
+	pd, err := original.ToPlutusData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ToPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	var decoded types.Container
+	if err := decoded.FromPlutusData(pd); err != nil {
+		fmt.Fprintf(os.Stderr, "FromPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !decoded.Payload.IsSet {
+		fmt.Fprintln(os.Stderr, "expected IsSet=true after round-trip")
+		os.Exit(1)
+	}
+	if decoded.Payload.Value.Integer == nil || decoded.Payload.Value.Integer.Cmp(big.NewInt(42)) != 0 {
+		fmt.Fprintf(os.Stderr, "expected Value=Int(42), got %+v\n", decoded.Payload.Value)
+		os.Exit(1)
+	}
+
+	fmt.Println("ok")
+}
+`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(testProgram), 0644); err != nil {
+		t.Fatalf("failed to write main.go: %v", err)
+	}
+
+	goMod := `module testpkg
+
+go 1.21
+
+require github.com/fxamacker/cbor/v2 v2.8.0
+
+require github.com/x448/float16 v0.8.4 // indirect
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = tmpDir
+	if output, err := tidyCmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy failed: %v\n%s", err, output)
+	}
+
+	runCmd := exec.Command("go", "run", "main.go")
+	runCmd.Dir = tmpDir
+	output, err := runCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("round-trip failed: %v\n%s\n\nGenerated code:\n%s", err, output, code)
+	}
+}
