@@ -553,3 +553,181 @@ require github.com/x448/float16 v0.8.4 // indirect
 		t.Fatalf("round-trip failed: %v\n%s\n\nGenerated code:\n%s", err, output, code)
 	}
 }
+
+// TestAikenAngleBracketGenerics verifies that the generator handles the
+// Aiken 1.1.22+ generic-type naming convention (List<X>, Option<X>,
+// Tuple<<X,Y>>, nested combinations). Before the fix, the names were
+// emitted verbatim as Go identifiers, which the Go compiler rejects.
+func TestAikenAngleBracketGenerics(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go compiler not found, skipping compilation test")
+	}
+
+	bpJSON := `{
+		"preamble": {
+			"title": "repro-angle-brackets",
+			"version": "0.0.1",
+			"plutusVersion": "v3"
+		},
+		"validators": [],
+		"definitions": {
+			"Container": {
+				"title": "Container",
+				"anyOf": [{
+					"title": "Container",
+					"dataType": "constructor",
+					"index": 0,
+					"fields": [
+						{ "title": "numbers", "$ref": "#/definitions/List<Int>" },
+						{ "title": "maybe", "$ref": "#/definitions/Option<Int>" },
+						{ "title": "pairs", "$ref": "#/definitions/List<Tuple<<ByteArray,Int>>>" }
+					]
+				}]
+			},
+			"List<Int>": {
+				"dataType": "list",
+				"items": { "$ref": "#/definitions/Int" }
+			},
+			"Option<Int>": {
+				"title": "Option",
+				"anyOf": [
+					{ "title": "Some", "dataType": "constructor", "index": 0,
+					  "fields": [{ "$ref": "#/definitions/Int" }] },
+					{ "title": "None", "dataType": "constructor", "index": 1, "fields": [] }
+				]
+			},
+			"Tuple<<ByteArray,Int>>": {
+				"dataType": "list",
+				"items": [{ "$ref": "#/definitions/ByteArray" }, { "$ref": "#/definitions/Int" }]
+			},
+			"List<Tuple<<ByteArray,Int>>>": {
+				"dataType": "list",
+				"items": { "$ref": "#/definitions/Tuple<<ByteArray,Int>>" }
+			},
+			"Int": { "dataType": "integer" },
+			"ByteArray": { "dataType": "bytes" }
+		}
+	}`
+
+	tmpDir, err := os.MkdirTemp("", "aiken_angle_brackets_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	bpFile := filepath.Join(tmpDir, "plutus.json")
+	if err := os.WriteFile(bpFile, []byte(bpJSON), 0644); err != nil {
+		t.Fatalf("failed to write blueprint file: %v", err)
+	}
+
+	bp, err := LoadBlueprint(bpFile)
+	if err != nil {
+		t.Fatalf("failed to load blueprint: %v", err)
+	}
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "types"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	// Sanity: no raw '<' should leak into Go identifiers anywhere in the
+	// generated code. ('>>' alone is too broad — it also matches valid Go
+	// bit-shift operators in the embedded plutusdata.go.)
+	for _, bad := range []string{"List<", "Option<", "Tuple<"} {
+		if strings.Contains(code, bad) {
+			t.Errorf("generated code still contains unnormalized name %q", bad)
+		}
+	}
+
+	typesDir := filepath.Join(tmpDir, "types")
+	if err := os.MkdirAll(typesDir, 0755); err != nil {
+		t.Fatalf("failed to create types dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(typesDir, "types.go"), []byte(code), 0644); err != nil {
+		t.Fatalf("failed to write types file: %v", err)
+	}
+
+	testProgram := `package main
+
+import (
+	"bytes"
+	"fmt"
+	"math/big"
+	"os"
+
+	"testpkg/types"
+)
+
+func main() {
+	original := types.Container{
+		Numbers: []*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3)},
+		Maybe:   types.OptionInt{IsSet: true, Value: big.NewInt(42)},
+		Pairs: []types.TupleBytearrayInt{
+			{ByteArray: []byte{0xAA}, Int: big.NewInt(1)},
+		},
+	}
+
+	pd, err := original.ToPlutusData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ToPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	var decoded types.Container
+	if err := decoded.FromPlutusData(pd); err != nil {
+		fmt.Fprintf(os.Stderr, "FromPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(decoded.Numbers) != 3 ||
+		decoded.Numbers[0].Cmp(big.NewInt(1)) != 0 ||
+		decoded.Numbers[1].Cmp(big.NewInt(2)) != 0 ||
+		decoded.Numbers[2].Cmp(big.NewInt(3)) != 0 {
+		fmt.Fprintf(os.Stderr, "Numbers mismatch: %+v\n", decoded.Numbers)
+		os.Exit(1)
+	}
+	if !decoded.Maybe.IsSet || decoded.Maybe.Value.Cmp(big.NewInt(42)) != 0 {
+		fmt.Fprintf(os.Stderr, "Maybe mismatch: %+v\n", decoded.Maybe)
+		os.Exit(1)
+	}
+	if len(decoded.Pairs) != 1 ||
+		!bytes.Equal(decoded.Pairs[0].ByteArray, []byte{0xAA}) ||
+		decoded.Pairs[0].Int.Cmp(big.NewInt(1)) != 0 {
+		fmt.Fprintf(os.Stderr, "Pairs mismatch: %+v\n", decoded.Pairs)
+		os.Exit(1)
+	}
+
+	fmt.Println("ok")
+}
+`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(testProgram), 0644); err != nil {
+		t.Fatalf("failed to write main.go: %v", err)
+	}
+
+	goMod := `module testpkg
+
+go 1.21
+
+require github.com/fxamacker/cbor/v2 v2.8.0
+
+require github.com/x448/float16 v0.8.4 // indirect
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = tmpDir
+	if output, err := tidyCmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy failed: %v\n%s", err, output)
+	}
+
+	runCmd := exec.Command("go", "run", "main.go")
+	runCmd.Dir = tmpDir
+	output, err := runCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("round-trip failed: %v\n%s\n\nGenerated code:\n%s", err, output, code)
+	}
+}

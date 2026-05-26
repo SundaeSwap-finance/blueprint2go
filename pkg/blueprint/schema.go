@@ -75,6 +75,33 @@ func (s *Schema) IsRef() bool {
 	return s.Ref != ""
 }
 
+// normalizeRefs recursively rewrites every $ref in this schema and its
+// descendants to use the legacy generic naming convention. See
+// normalizeAikenGenerics in blueprint.go.
+func (s *Schema) normalizeRefs() {
+	if s == nil {
+		return
+	}
+	if s.Ref != "" {
+		const prefix = "#/definitions/"
+		if strings.HasPrefix(s.Ref, prefix) {
+			name := strings.TrimPrefix(s.Ref, prefix)
+			s.Ref = prefix + normalizeAikenName(name)
+		}
+	}
+	for i := range s.AnyOf {
+		s.AnyOf[i].normalizeRefs()
+	}
+	for i := range s.Fields {
+		s.Fields[i].normalizeRefs()
+	}
+	for i := range s.Items {
+		s.Items[i].normalizeRefs()
+	}
+	s.Keys.normalizeRefs()
+	s.Values.normalizeRefs()
+}
+
 // RefName extracts the definition name from a $ref string.
 // For example, "#/definitions/types~1Payout" returns "types/Payout".
 func (s *Schema) RefName() string {
