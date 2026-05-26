@@ -731,3 +731,260 @@ require github.com/x448/float16 v0.8.4 // indirect
 		t.Fatalf("round-trip failed: %v\n%s\n\nGenerated code:\n%s", err, output, code)
 	}
 }
+
+// TestDataFieldInEveryPosition verifies that the raw Data type (which maps
+// to PlutusData, *not* a generated struct with To/FromPlutusData methods) is
+// handled correctly everywhere it can appear in a generated type:
+// - a direct struct field (already covered, but kept here as a regression guard)
+// - a tuple element (the originally reported bug: Tuple$ByteArray_Data)
+// - the inner type of an Option (regression guard for the f25e6d2 fix)
+// - the element type of a named List
+// - the value type of Pairs (map)
+//
+// PlutusData has no ToPlutusData / FromPlutusData methods, so any code path
+// that emits v.X.ToPlutusData() or v.X.FromPlutusData(...) on a Data field
+// will fail to compile.
+func TestDataFieldInEveryPosition(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go compiler not found, skipping compilation test")
+	}
+
+	bpJSON := `{
+		"preamble": {
+			"title": "repro-data-positions",
+			"version": "0.0.1",
+			"plutusVersion": "v3"
+		},
+		"validators": [],
+		"definitions": {
+			"Container": {
+				"title": "Container",
+				"anyOf": [{
+					"title": "Container",
+					"dataType": "constructor",
+					"index": 0,
+					"fields": [
+						{ "title": "direct", "$ref": "#/definitions/Data" },
+						{ "title": "constraints", "$ref": "#/definitions/List$Tuple$ByteArray_Data" },
+						{ "title": "maybe", "$ref": "#/definitions/Option$Data" },
+						{ "title": "payloads", "$ref": "#/definitions/List$Data" },
+						{ "title": "byTag", "$ref": "#/definitions/Pairs$ByteArray_Data" }
+					]
+				}]
+			},
+			"Tuple$ByteArray_Data": {
+				"dataType": "list",
+				"items": [
+					{ "$ref": "#/definitions/ByteArray" },
+					{ "$ref": "#/definitions/Data" }
+				]
+			},
+			"List$Tuple$ByteArray_Data": {
+				"dataType": "list",
+				"items": { "$ref": "#/definitions/Tuple$ByteArray_Data" }
+			},
+			"Option$Data": {
+				"title": "Option",
+				"anyOf": [
+					{ "title": "Some", "dataType": "constructor", "index": 0,
+					  "fields": [{ "$ref": "#/definitions/Data" }] },
+					{ "title": "None", "dataType": "constructor", "index": 1, "fields": [] }
+				]
+			},
+			"List$Data": {
+				"dataType": "list",
+				"items": { "$ref": "#/definitions/Data" }
+			},
+			"Pairs$ByteArray_Data": {
+				"dataType": "map",
+				"keys":   { "$ref": "#/definitions/ByteArray" },
+				"values": { "$ref": "#/definitions/Data" }
+			},
+			"ByteArray": { "dataType": "bytes" },
+			"Data": { "title": "Data", "description": "Any Plutus data." }
+		}
+	}`
+
+	tmpDir, err := os.MkdirTemp("", "data_positions_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	bpFile := filepath.Join(tmpDir, "plutus.json")
+	if err := os.WriteFile(bpFile, []byte(bpJSON), 0644); err != nil {
+		t.Fatalf("failed to write blueprint file: %v", err)
+	}
+
+	bp, err := LoadBlueprint(bpFile)
+	if err != nil {
+		t.Fatalf("failed to load blueprint: %v", err)
+	}
+
+	gen := NewGenerator(bp, GeneratorOptions{PackageName: "types"})
+	code, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("failed to generate code: %v", err)
+	}
+
+	// Static guard: the generator must never call To/FromPlutusData on a
+	// PlutusData-typed field named Data (the field name we use for the raw
+	// Data positions in this test).
+	for _, bad := range []string{
+		"v.Data.ToPlutusData(",
+		"v.Data.FromPlutusData(",
+	} {
+		if strings.Contains(code, bad) {
+			t.Errorf("generated code calls %s on raw PlutusData (Data-field bug)", bad)
+		}
+	}
+
+	typesDir := filepath.Join(tmpDir, "types")
+	if err := os.MkdirAll(typesDir, 0755); err != nil {
+		t.Fatalf("failed to create types dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(typesDir, "types.go"), []byte(code), 0644); err != nil {
+		t.Fatalf("failed to write types file: %v", err)
+	}
+
+	testProgram := `package main
+
+import (
+	"bytes"
+	"fmt"
+	"math/big"
+	"os"
+
+	"testpkg/types"
+)
+
+func main() {
+	original := types.Container{
+		Direct: types.NewBytesPlutusData([]byte{0x01, 0x02}),
+		Constraints: []types.TupleBytearrayData{
+			{ByteArray: []byte{0xAA}, Data: types.NewIntPlutusData(big.NewInt(7))},
+			{ByteArray: []byte{0xBB}, Data: types.NewBytesPlutusData([]byte{0xFF})},
+		},
+		Maybe: types.OptionData{
+			IsSet: true,
+			Value: types.NewIntPlutusData(big.NewInt(42)),
+		},
+		Payloads: []types.PlutusData{
+			types.NewIntPlutusData(big.NewInt(1)),
+			types.NewBytesPlutusData([]byte{0xDE, 0xAD}),
+		},
+		ByTag: map[string]types.PlutusData{
+			"\x01": types.NewIntPlutusData(big.NewInt(100)),
+			"\x02": types.NewBytesPlutusData([]byte{0xBE, 0xEF}),
+		},
+	}
+
+	pd, err := original.ToPlutusData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ToPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	cborBytes, err := pd.MarshalCBOR()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "MarshalCBOR: %v\n", err)
+		os.Exit(1)
+	}
+
+	var roundPd types.PlutusData
+	if err := roundPd.UnmarshalCBOR(cborBytes); err != nil {
+		fmt.Fprintf(os.Stderr, "UnmarshalCBOR: %v\n", err)
+		os.Exit(1)
+	}
+
+	var decoded types.Container
+	if err := decoded.FromPlutusData(roundPd); err != nil {
+		fmt.Fprintf(os.Stderr, "FromPlutusData: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !decoded.Direct.Equals(original.Direct) {
+		fmt.Fprintf(os.Stderr, "Direct mismatch: %+v vs %+v\n", decoded.Direct, original.Direct)
+		os.Exit(1)
+	}
+
+	if len(decoded.Constraints) != 2 {
+		fmt.Fprintf(os.Stderr, "Constraints len: %d\n", len(decoded.Constraints))
+		os.Exit(1)
+	}
+	for i, c := range decoded.Constraints {
+		if !bytes.Equal(c.ByteArray, original.Constraints[i].ByteArray) {
+			fmt.Fprintf(os.Stderr, "Constraints[%d].ByteArray mismatch\n", i)
+			os.Exit(1)
+		}
+		if !c.Data.Equals(original.Constraints[i].Data) {
+			fmt.Fprintf(os.Stderr, "Constraints[%d].Data mismatch: %+v vs %+v\n", i, c.Data, original.Constraints[i].Data)
+			os.Exit(1)
+		}
+	}
+
+	if !decoded.Maybe.IsSet || !decoded.Maybe.Value.Equals(original.Maybe.Value) {
+		fmt.Fprintf(os.Stderr, "Maybe mismatch: %+v\n", decoded.Maybe)
+		os.Exit(1)
+	}
+
+	if len(decoded.Payloads) != 2 {
+		fmt.Fprintf(os.Stderr, "Payloads len: %d\n", len(decoded.Payloads))
+		os.Exit(1)
+	}
+	for i, p := range decoded.Payloads {
+		if !p.Equals(original.Payloads[i]) {
+			fmt.Fprintf(os.Stderr, "Payloads[%d] mismatch\n", i)
+			os.Exit(1)
+		}
+	}
+
+	if len(decoded.ByTag) != 2 {
+		fmt.Fprintf(os.Stderr, "ByTag len: %d\n", len(decoded.ByTag))
+		os.Exit(1)
+	}
+	for k, want := range original.ByTag {
+		got, ok := decoded.ByTag[k]
+		if !ok {
+			fmt.Fprintf(os.Stderr, "ByTag missing key %q\n", k)
+			os.Exit(1)
+		}
+		if !got.Equals(want) {
+			fmt.Fprintf(os.Stderr, "ByTag[%q] mismatch\n", k)
+			os.Exit(1)
+		}
+	}
+
+	fmt.Println("ok")
+}
+`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(testProgram), 0644); err != nil {
+		t.Fatalf("failed to write main.go: %v", err)
+	}
+
+	goMod := `module testpkg
+
+go 1.21
+
+require github.com/fxamacker/cbor/v2 v2.8.0
+
+require github.com/x448/float16 v0.8.4 // indirect
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = tmpDir
+	if output, err := tidyCmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy failed: %v\n%s", err, output)
+	}
+
+	runCmd := exec.Command("go", "run", "main.go")
+	runCmd.Dir = tmpDir
+	output, err := runCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("round-trip failed: %v\n%s\n\nGenerated code:\n%s", err, output, code)
+	}
+}

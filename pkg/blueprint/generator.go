@@ -1296,6 +1296,9 @@ func (g *Generator) writeListFieldToPlutusData(fieldName, refName string, index 
 		g.writeLine(fmt.Sprintf("list%d[i] = NewConstrPlutusData(0)", index))
 		g.indentDec()
 		g.writeLine("}")
+	case "Data":
+		// Data is raw PlutusData - assign directly.
+		g.writeLine(fmt.Sprintf("list%d[i] = item", index))
 	default:
 		if g.isPrimitiveWrapper(inner, "bytes") {
 			g.writeLine(fmt.Sprintf("list%d[i] = NewBytesPlutusData(item)", index))
@@ -1378,6 +1381,9 @@ func (g *Generator) writeMapValueToPlutusData(valueType string, fieldName string
 		g.writeLine(fmt.Sprintf("valPd%d := NewIntPlutusData(val)", index))
 	case "ByteArray":
 		g.writeLine(fmt.Sprintf("valPd%d := NewBytesPlutusData(val)", index))
+	case "Data":
+		// Data is raw PlutusData - assign directly.
+		g.writeLine(fmt.Sprintf("valPd%d := val", index))
 	default:
 		if g.isPrimitiveWrapper(valueType, "bytes") {
 			g.writeLine(fmt.Sprintf("valPd%d := NewBytesPlutusData(val)", index))
@@ -1520,6 +1526,9 @@ func (g *Generator) writeInlineMapValueToPlutusData(valueSchema *Schema, fieldNa
 			g.writeLine(fmt.Sprintf("valPd%d := NewIntPlutusData(val)", index))
 		case "ByteArray":
 			g.writeLine(fmt.Sprintf("valPd%d := NewBytesPlutusData(val)", index))
+		case "Data":
+			// Data is raw PlutusData - assign directly.
+			g.writeLine(fmt.Sprintf("valPd%d := val", index))
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
 				g.writeLine(fmt.Sprintf("valPd%d := NewBytesPlutusData(val)", index))
@@ -1597,6 +1606,9 @@ func (g *Generator) writeListItemToPlutusData(itemSchema *Schema, listIndex int)
 			g.writeLine(fmt.Sprintf("list%d[i] = NewConstrPlutusData(0)", listIndex))
 			g.indentDec()
 			g.writeLine("}")
+		case "Data":
+			// Data is raw PlutusData - assign directly.
+			g.writeLine(fmt.Sprintf("list%d[i] = item", listIndex))
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
 				g.writeLine(fmt.Sprintf("list%d[i] = NewBytesPlutusData(item)", listIndex))
@@ -2032,6 +2044,9 @@ func (g *Generator) writeListFieldFromPlutusData(fieldName, refName string, inde
 		g.indentDec()
 		g.writeLine("}")
 		g.writeLine(fmt.Sprintf("v.%s[i] = item.Constr.Index == 1", fieldName))
+	case "Data":
+		// Data is raw PlutusData - assign directly.
+		g.writeLine(fmt.Sprintf("v.%s[i] = item", fieldName))
 	default:
 		if g.isPrimitiveWrapper(inner, "bytes") {
 			g.writeBytesDecode("item", target, errBytes)
@@ -2084,6 +2099,9 @@ func (g *Generator) writeListFieldFromPlutusDataInline(fieldName string, schema 
 				g.writeLine(fmt.Sprintf("v.%s[i] = item.ByteString", fieldName))
 			case "Bool":
 				g.writeLine(fmt.Sprintf("v.%s[i] = item.Constr != nil && item.Constr.Index == 1", fieldName))
+			case "Data":
+				// Data is raw PlutusData - assign directly.
+				g.writeLine(fmt.Sprintf("v.%s[i] = item", fieldName))
 			default:
 				if g.isPrimitiveWrapper(refName, "bytes") {
 					g.writeLine(fmt.Sprintf("v.%s[i] = item.ByteString", fieldName))
@@ -2198,6 +2216,9 @@ func (g *Generator) writeMapValueFromPlutusData(valueType string, fieldName stri
 		g.writeLine("mapVal := entry.Value.Integer")
 	case "ByteArray":
 		g.writeLine("mapVal := entry.Value.ByteString")
+	case "Data":
+		// Data is raw PlutusData - assign directly.
+		g.writeLine("mapVal := entry.Value")
 	default:
 		if g.isPrimitiveWrapper(valueType, "bytes") {
 			g.writeLine("mapVal := entry.Value.ByteString")
@@ -2316,6 +2337,9 @@ func (g *Generator) writeInlineMapValueFromPlutusData(valueSchema *Schema, field
 			g.writeLine("mapVal := entry.Value.Integer")
 		case "ByteArray":
 			g.writeLine("mapVal := entry.Value.ByteString")
+		case "Data":
+			// Data is raw PlutusData - assign directly.
+			g.writeLine("mapVal := entry.Value")
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
 				g.writeLine("mapVal := entry.Value.ByteString")
@@ -3006,6 +3030,9 @@ func (g *Generator) writeTupleFieldToPlutusData(fieldName string, item *Schema, 
 			g.indentDec()
 			g.writeLine("}")
 			g.writeLine(fmt.Sprintf("items[%d] = NewBytesPlutusData(v.%s)", index, fieldName))
+		case "Data":
+			// Data is raw PlutusData - assign directly, no ToPlutusData call.
+			g.writeLine(fmt.Sprintf("items[%d] = v.%s", index, fieldName))
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
 				g.writeLine(fmt.Sprintf("if v.%s == nil {", fieldName))
@@ -3074,6 +3101,9 @@ func (g *Generator) writeTupleFieldFromPlutusDataWithSource(fieldName string, it
 			g.writeIntegerDecode(source, target, errInt)
 		case "ByteArray":
 			g.writeBytesDecode(source, target, errBytes)
+		case "Data":
+			// Data is raw PlutusData - assign directly, no FromPlutusData call.
+			g.writeLine(fmt.Sprintf("%s = %s", target, source))
 		default:
 			if g.isPrimitiveWrapper(refName, "bytes") {
 				g.writeBytesDecode(source, target, errBytes)
