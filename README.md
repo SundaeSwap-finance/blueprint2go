@@ -234,14 +234,25 @@ The index corresponds to the order of declaration in the Aiken source.
 
 The CBOR encoding follows the Plutus Data format:
 
-| Plutus Type     | CBOR Encoding            |
-| --------------- | ------------------------ |
-| Integer         | CBOR integer/bignum      |
-| ByteString      | CBOR bytes               |
-| List            | CBOR array               |
-| Map             | CBOR map                 |
-| Constructor 0-6 | CBOR tag 121-127 + array |
-| Constructor 7+  | CBOR tag 1280+n + array  |
+| Plutus Type          | CBOR Encoding                                        |
+| -------------------- | ---------------------------------------------------- |
+| Integer              | CBOR integer/bignum                                  |
+| ByteString (≤ 64 B)  | CBOR bytes, definite length                          |
+| ByteString (> 64 B)  | Indefinite-length CBOR bytes, chunks of up to 64 B   |
+| List                 | CBOR array                                           |
+| Map                  | CBOR map                                             |
+| Constructor 0-6      | CBOR tag 121-127 + array                             |
+| Constructor 7+       | CBOR tag 1280+n + array                              |
+
+Bytestrings longer than 64 bytes are chunked to match Cardano's own Plutus data
+encoder and `@blaze-cardano/data`: `0x5f`, then definite-length chunks of 64 bytes
+(the last being the remainder), then the `0xff` break. This applies wherever a
+bytestring appears — as a constructor field, list item, map key, or map value. For
+example, 100 bytes of `0xab` encode as `5f 5840 <64 bytes> 5824 <36 bytes> ff`.
+
+Decoding accepts both forms and yields the same value, since CBOR decoders
+concatenate the chunks. See [CHANGELOG.md](CHANGELOG.md) — this changed in a
+release and is breaking for consumers that persist hashes of encoded PlutusData.
 
 ## Testing
 

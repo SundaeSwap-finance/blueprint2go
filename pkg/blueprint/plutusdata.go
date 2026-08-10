@@ -39,6 +39,12 @@ const (
 	cborTagConstrBase = 1280
 )
 
+// maxByteStringChunkSize is the largest bytestring Plutus data CBOR encodes as a
+// single definite-length byte string. Longer bytestrings are emitted as an
+// indefinite-length byte string of chunks no larger than this, matching Cardano's
+// own encoder.
+const maxByteStringChunkSize = 64
+
 // NewConstrPlutusData creates a new constructor PlutusData.
 func NewConstrPlutusData(index uint64, fields ...PlutusData) PlutusData {
 	return PlutusData{Constr: &ConstrPlutusData{Index: index, Fields: fields}}
@@ -165,6 +171,34 @@ func (p *PlutusData) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// encodeByteString encodes b the way Plutus data CBOR requires: a single
+// definite-length byte string when it fits in one chunk, otherwise an
+// indefinite-length byte string whose chunks are each at most
+// maxByteStringChunkSize bytes. Decoders concatenate the chunks, so both forms
+// carry the same value; only the wire bytes (and therefore any hash of them)
+// differ.
+func encodeByteString(em cbor.EncMode, b []byte) ([]byte, error) {
+	if len(b) <= maxByteStringChunkSize {
+		return em.Marshal(b)
+	}
+	var buf bytes.Buffer
+	buf.WriteByte(0x5f) // indefinite-length byte string start
+	for len(b) > 0 {
+		n := maxByteStringChunkSize
+		if len(b) < n {
+			n = len(b)
+		}
+		chunk, err := em.Marshal(b[:n])
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(chunk)
+		b = b[n:]
+	}
+	buf.WriteByte(0xff) // break
+	return buf.Bytes(), nil
+}
+
 func (p PlutusData) toCBORBytes() ([]byte, error) {
 	em, err := cbor.EncOptions{BigIntConvert: cbor.BigIntConvertShortest}.EncMode()
 	if err != nil {
@@ -209,7 +243,7 @@ func (p PlutusData) toCBORBytes() ([]byte, error) {
 	case p.Integer != nil:
 		return em.Marshal(p.Integer)
 	case p.ByteString != nil:
-		return em.Marshal(p.ByteString)
+		return encodeByteString(em, p.ByteString)
 	case p.List != nil:
 		var buf bytes.Buffer
 		// Write indefinite-length array start
