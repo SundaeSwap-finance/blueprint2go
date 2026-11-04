@@ -254,6 +254,10 @@ Decoding accepts both forms and yields the same value, since CBOR decoders
 concatenate the chunks. See [CHANGELOG.md](CHANGELOG.md) — this changed in a
 release and is breaking for consumers that persist hashes of encoded PlutusData.
 
+Plutus data decoding accepts up to 16,384 nested CBOR levels, including tags and
+arrays. This supports orders with deeply nested inline continuations while
+retaining a finite limit for malformed inputs.
+
 ## Testing
 
 Run all tests:

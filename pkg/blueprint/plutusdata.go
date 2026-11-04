@@ -155,7 +155,11 @@ func (p PlutusData) MarshalCBOR() ([]byte, error) {
 
 // UnmarshalCBOR deserializes PlutusData from CBOR bytes.
 func (p *PlutusData) UnmarshalCBOR(data []byte) error {
-	dm, err := cbor.DecOptions{BigIntDec: cbor.BigIntDecodePointer}.DecMode()
+	// Inline continuations embed later orders as Plutus data and can exceed 32 levels.
+	dm, err := cbor.DecOptions{
+		BigIntDec:       cbor.BigIntDecodePointer,
+		MaxNestedLevels: 16_384,
+	}.DecMode()
 	if err != nil {
 		return err
 	}
